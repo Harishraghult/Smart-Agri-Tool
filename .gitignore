@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+
+# Downloaded and generated datasets
+data/
+PlantDoc dataset/
+plantvillage dataset/
+processed_plantdoc/
+
+# Generated outputs and model artifacts
+checkpoints/
+predictions/
+
+# Local sample/export files
+leaf.jpg
+leaf12.jpg
+*.docx
