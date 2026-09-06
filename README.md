@@ -185,5 +185,4 @@ python scripts/prepare_crop_tabular.py
 
 ---
 
-## 📄 License
-Distributed under the MIT License. See `LICENSE` for details.
+
