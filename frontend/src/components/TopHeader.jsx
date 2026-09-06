@@ -1,8 +1,8 @@
 import React from 'react';
-import { Activity } from 'lucide-react';
 
 export default function TopHeader({ activeTab }) {
   const titles = {
+    overview: { title: 'AgriPulse AI Executive Dashboard', subtitle: 'Real-time multi-model analytics, health indices, & quick launch' },
     diagnosis: { title: 'Plant Disease & Pathology Diagnosis', subtitle: 'CNN classification + U-Net lesion area severity percentage' },
     ripeness: { title: 'Fruit Ripeness & Quality Assessment', subtitle: 'Dedicated Fruit CNN track + HSV/Lab color space analysis' },
     field: { title: 'Field Scouting & Object Intelligence', subtitle: 'YOLOv8 Pest Detection + YOLOv8 Weed Segmentation + Wilting CNN' },
@@ -11,7 +11,7 @@ export default function TopHeader({ activeTab }) {
     chat: { title: 'AI Agricultural Expert Chatbot', subtitle: 'Interactive farming advisory & IPM knowledge retrieval' },
   };
 
-  const current = titles[activeTab] || titles.diagnosis;
+  const current = titles[activeTab] || titles.overview;
 
   return (
     <header className="top-header">

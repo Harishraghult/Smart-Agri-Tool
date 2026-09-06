@@ -1,6 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
 
+const SUGGESTIONS = [
+  'How to treat Tomato Early Blight?',
+  'What is the ideal NPK ratio for Rice?',
+  'How to control aphids and spider mites organically?',
+  'What weather conditions trigger Late Blight?'
+];
+
 export default function ChatbotModal() {
   const [messages, setMessages] = useState([
     {
@@ -20,9 +27,9 @@ export default function ChatbotModal() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim() || loading) return;
-    const userMsg = input.trim();
+  const handleSend = async (textToSend) => {
+    const userMsg = (textToSend || input).trim();
+    if (!userMsg || loading) return;
     setInput('');
 
     setMessages((prev) => [...prev, { role: 'user', content: userMsg }]);
@@ -42,10 +49,9 @@ export default function ChatbotModal() {
       setMessages((prev) => [...prev, { role: 'assistant', content: data.bot_response }]);
     } catch (err) {
       console.error(err);
-      // Fallback response
       setMessages((prev) => [...prev, {
         role: 'assistant',
-        content: `I received your query regarding **"${userMsg}"**. For best management:\n1. Maintain proper field drainage.\n2. Apply recommended bio-pesticides or copper sprays at early symptom onset.\n3. Feel free to upload a leaf photo in the Image Diagnosis tab for automated computer-vision diagnosis!`
+        content: `I received your query regarding **"${userMsg}"**.\n\nRecommended Management:\n1. Maintain proper field sanitation.\n2. Apply recommended bio-pesticides or copper sprays at early symptom onset.\n3. Feel free to upload a leaf photo in the Image Diagnosis tab for automated computer-vision diagnosis!`
       }]);
     } finally {
       setLoading(false);
@@ -63,6 +69,23 @@ export default function ChatbotModal() {
           <h3 style={{ fontSize: '1.1rem', color: '#ffffff' }}>AI Agricultural Advisory Chatbot</h3>
           <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Powered by Agricultural Pathology RAG Engine</p>
         </div>
+      </div>
+
+      {/* Suggestion Chips */}
+      <div style={{ padding: '10px 20px', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px', overflowX: 'auto' }}>
+        <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', shrink: 0 }}>
+          <Sparkles size={14} /> Quick Questions:
+        </span>
+        {SUGGESTIONS.map((sug, i) => (
+          <button
+            key={i}
+            className="btn-secondary"
+            style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: '999px', shrink: 0, whiteSpace: 'nowrap' }}
+            onClick={() => handleSend(sug)}
+          >
+            {sug}
+          </button>
+        ))}
       </div>
 
       {/* Messages */}
@@ -124,7 +147,7 @@ export default function ChatbotModal() {
           className="form-input"
           style={{ flex: 1 }}
         />
-        <button className="btn-primary" onClick={handleSend} disabled={loading}>
+        <button className="btn-primary" onClick={() => handleSend()} disabled={loading}>
           <Send size={18} /> Send
         </button>
       </div>

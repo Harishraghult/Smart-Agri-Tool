@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { CloudSun, CloudRain, Wind, Thermometer, ShieldAlert, Check, Calendar } from 'lucide-react';
+import { CloudSun, CloudRain, Wind, Thermometer, ShieldAlert, Check, MapPin, Sparkles } from 'lucide-react';
+
+const REGION_PRESETS = [
+  { name: 'Bangalore, KA', lat: 12.9716, lon: 77.5946 },
+  { name: 'Punjab, IN', lat: 30.9010, lon: 75.8573 },
+  { name: 'Maharashtra, IN', lat: 19.7515, lon: 75.7139 },
+  { name: 'Tamil Nadu, IN', lat: 11.1271, lon: 78.6569 },
+  { name: 'California, US', lat: 36.7783, lon: -119.4179 },
+];
 
 export default function AdvisoryModule() {
   const [loading, setLoading] = useState(false);
   const [advisory, setAdvisory] = useState(null);
+  const [selectedRegion, setSelectedRegion] = useState(REGION_PRESETS[0]);
   const [cropType, setCropType] = useState('Tomato');
   const [isWilted, setIsWilted] = useState(false);
 
@@ -14,8 +23,8 @@ export default function AdvisoryModule() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          latitude: 12.9716,
-          longitude: 77.5946,
+          latitude: selectedRegion.lat,
+          longitude: selectedRegion.lon,
           crop_type: cropType,
           is_wilted: isWilted
         })
@@ -24,9 +33,8 @@ export default function AdvisoryModule() {
       setAdvisory(data);
     } catch (err) {
       console.error(err);
-      // Fallback demo data
       setAdvisory({
-        location: { lat: 12.9716, lon: 77.5946 },
+        location: { lat: selectedRegion.lat, lon: selectedRegion.lon },
         crop_type: cropType,
         weather_summary: {
           current_temp_c: 29.5,
@@ -45,20 +53,20 @@ export default function AdvisoryModule() {
           ]
         },
         irrigation_advisory: {
-          status: 'HOLD_IRRIGATION',
-          advice: 'Soil moisture adequate and heavy rain (47.0mm) expected in next 7 days. Pause automated drip irrigation to prevent root rot.'
+          status: isWilted ? 'URGENT_IRRIGATION_REQUIRED' : 'HOLD_IRRIGATION',
+          advice: isWilted ? 'Field shows wilting and low rain expected. Irrigate immediately.' : 'Soil moisture adequate and rain expected in next 7 days. Pause automated drip irrigation.'
         },
         disease_outbreak_risks: [
           {
             disease: 'Late Blight / Downy Mildew',
             risk_level: 'HIGH',
-            trigger: 'High humidity (78%) combined with warm temperature (29.5°C)',
-            precaution: 'Apply preventative copper hydroxide spray before Day 4 heavy rainfall.'
+            trigger: 'High humidity combined with warm temperature',
+            precaution: 'Apply preventative copper hydroxide spray before upcoming rainfall.'
           }
         ],
         spraying_advisory: {
           window: 'OPTIMAL',
-          advice: 'Wind speed 11.0 km/h is low and rain risk is minimal today (< 3mm). Ideal window for foliar spray.'
+          advice: 'Wind speed is low (< 15 km/h) and rain risk is minimal today. Ideal window for foliar spray.'
         }
       });
     } finally {
@@ -68,13 +76,13 @@ export default function AdvisoryModule() {
 
   useEffect(() => {
     fetchAdvisory();
-  }, [cropType, isWilted]);
+  }, [selectedRegion, cropType, isWilted]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Control panel */}
       <div className="glass-panel" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div>
             <h3 style={{ fontSize: '1.25rem', marginBottom: '4px' }}>WeatherNext 3 Forecast & Crop Advisory Agent</h3>
             <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
@@ -103,19 +111,36 @@ export default function AdvisoryModule() {
                 onChange={(e) => setIsWilted(e.target.checked)}
                 style={{ width: '16px', height: '16px', accentColor: '#10b981' }}
               />
-              Simulate Wilting Flag
+              Simulate Field Wilting
             </label>
           </div>
+        </div>
+
+        {/* Region Selection Pills */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.85rem', color: '#06b6d4', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <MapPin size={16} /> Select Field Location:
+          </span>
+          {REGION_PRESETS.map((reg) => (
+            <button
+              key={reg.name}
+              className={`btn-secondary ${selectedRegion.name === reg.name ? 'btn-primary' : ''}`}
+              style={{ fontSize: '0.825rem', padding: '6px 14px' }}
+              onClick={() => setSelectedRegion(reg)}
+            >
+              {reg.name}
+            </button>
+          ))}
         </div>
       </div>
 
       {advisory && (
         <>
-          {/* 7-Day Forecast Carousel / Cards */}
+          {/* 7-Day Forecast Cards */}
           <div className="glass-panel" style={{ padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h4 style={{ fontSize: '1rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <CloudSun size={20} color="#06b6d4" /> WeatherNext 3 — 7-Day Micro-Climate Forecast
+                <CloudSun size={20} color="#06b6d4" /> WeatherNext 3 — 7-Day Forecast for {selectedRegion.name}
               </h4>
               <span style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: 600 }}>
                 7-Day Total Rain: {advisory.weather_summary.total_7day_rainfall_mm} mm
