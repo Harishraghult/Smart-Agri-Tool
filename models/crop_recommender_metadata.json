@@ -1,0 +1,43 @@
+{
+  "model_type": "XGBClassifier",
+  "n_estimators": 200,
+  "max_depth": 6,
+  "feature_cols": [
+    "N",
+    "P",
+    "K",
+    "temperature",
+    "humidity",
+    "ph",
+    "rainfall"
+  ],
+  "classes": [
+    "apple",
+    "banana",
+    "blackgram",
+    "chickpea",
+    "coconut",
+    "coffee",
+    "cotton",
+    "grapes",
+    "jute",
+    "kidneybeans",
+    "lentil",
+    "maize",
+    "mango",
+    "mothbeans",
+    "mungbean",
+    "muskmelon",
+    "orange",
+    "papaya",
+    "pigeonpeas",
+    "pomegranate",
+    "rice",
+    "watermelon"
+  ],
+  "val_accuracy": 0.990909090909091,
+  "test_accuracy": 0.9939393939393939,
+  "train_size": 1540,
+  "val_size": 330,
+  "test_size": 330
+}
