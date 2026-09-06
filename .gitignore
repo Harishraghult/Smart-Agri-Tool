@@ -1,17 +1,38 @@
 __pycache__/
 *.py[cod]
+*$py.class
 
-# Downloaded and generated datasets
+# Large Datasets & Zip archives
 data/
+raw/
+processed/
 PlantDoc dataset/
 plantvillage dataset/
 processed_plantdoc/
+*.zip
+*.tar.gz
+*.crdownload
 
-# Generated outputs and model artifacts
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+npm-debug.log*
+
+# Databases & Environments
+*.db
+.env
+.venv/
+venv/
+ENV/
+
+# Model Checkpoints & Large Artifacts
 checkpoints/
 predictions/
+*.pt
+*.onnx
 
-# Local sample/export files
+# Word documents / local testing
+*.docx
 leaf.jpg
 leaf12.jpg
-*.docx
