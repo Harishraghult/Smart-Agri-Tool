@@ -199,7 +199,17 @@ def test_lab_photo_not_overridden_by_species_id():
 
 def test_model_choices_listed():
     ids = [m["id"] for m in client.get("/api/v1/diagnosis/models").json()["models"]]
-    assert ids == ["auto", "lab", "farm", "farm_bioclip"]
+    expected = ["auto", "lab", "farm"] + (["farm_bioclip"] if species_service.model is not None else [])
+    assert ids == expected
+
+
+def test_bioclip_choice_rejected_when_disabled():
+    if species_service.model is not None:
+        pytest.skip("BioCLIP-2 is enabled")
+    r = client.post("/api/v1/diagnosis/predict", files={"file": ("x", encode(leaf()), "image/jpeg")},
+                    data={"model": "farm_bioclip"})
+    assert r.status_code == 422
+    assert "turned off" in r.json()["detail"]
 
 
 def test_unknown_model_choice_rejected():
@@ -212,7 +222,8 @@ def test_unknown_model_choice_rejected():
 @pytest.mark.parametrize("choice,engine", [
     ("lab", "efficientnet_b0_plantvillage"),
     ("farm", "efficientnet_b0_plantdoc"),
-    ("farm_bioclip", "efficientnet_b0_plantdoc"),
+    pytest.param("farm_bioclip", "efficientnet_b0_plantdoc",
+                 marks=pytest.mark.skipif(species_service.model is None, reason="BioCLIP-2 disabled")),
     ("auto", "efficientnet_b0_plantvillage"),  # lab-style sample photo -> router picks Lab
 ])
 def test_model_choice_selects_model(choice, engine):

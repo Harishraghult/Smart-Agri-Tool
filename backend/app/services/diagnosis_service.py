@@ -78,11 +78,21 @@ _CROP_ALIASES = {"corn": "Corn (Maize)", "maize": "Corn (Maize)", "pepper": "Bel
 
 # Which disease model to use. Accuracies are measured on held-out test photos (see README).
 MODEL_CHOICES = {
-    "auto": "Auto: the image router sends lab-style photos to the Lab model and farm photos to Farm + BioCLIP-2",
+    "auto": "Auto: the image router sends lab-style photos to the Lab model and farm photos to the Farm model",
     "lab": "Lab model (PlantVillage): single leaf on a plain background",
     "farm": "Farm model (PlantDoc): real farm photos",
     "farm_bioclip": "Farm model + BioCLIP-2: BioCLIP-2 identifies the plant species first",
 }
+
+
+def available_model_choices() -> dict:
+    """Choices that actually work on this server (farm_bioclip needs the BioCLIP-2 species identifier)."""
+    choices = dict(MODEL_CHOICES)
+    if species_service.model is None:
+        choices.pop("farm_bioclip")
+    else:
+        choices["auto"] += " (with BioCLIP-2 crop identification)"
+    return choices
 
 
 class InvalidModelChoiceError(ValueError):
@@ -212,6 +222,9 @@ class DiagnosisService:
             raise InvalidModelChoiceError(f"Unknown model '{model_choice}'. Choose one of: {', '.join(MODEL_CHOICES)}.")
         if model_choice in ("farm", "farm_bioclip") and self.field_model is None:
             raise InvalidModelChoiceError("The Farm model is not available on this server.")
+        if model_choice == "farm_bioclip" and species_service.model is None:
+            raise InvalidModelChoiceError("BioCLIP-2 is turned off on this server (SPECIES_ID_ENABLED=false); "
+                                          "choose the Farm model instead.")
         crop_display, crop_prefix = resolve_crop(crop_type)
         image = load_rgb_image(image_bytes)
         img_tensor = EVAL_TRANSFORM(image).unsqueeze(0).to(DEVICE)

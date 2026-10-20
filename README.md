@@ -77,7 +77,9 @@ crop's diseases, which fixes cross-crop mistakes (a potato leaf read as tomato):
 75.2% → 85.0%. Crops outside the 14 supported ones (`GET /api/v1/diagnosis/crops`) get a 422 explaining
 that a diagnosis would be a guess, instead of a wrong answer.
 
-**Auto-detect** uses [BioCLIP-2](https://huggingface.co/imageomics/bioclip-2) (MIT licence, trained on 200M
+**Optional, off by default:** [BioCLIP-2](https://huggingface.co/imageomics/bioclip-2) (`SPECIES_ID_ENABLED=true`).
+With the PlantWild-trained farm model it adds only ~2 points (PlantDoc test 78.5% → 80.3%), so it is off to avoid
+the 1.7 GB download and CPU slowness; its remaining value is naming unsupported plants. When enabled, Auto-detect uses it (MIT licence, trained on 200M
 organism photos) to identify the plant species in field photos. When it is ≥90% sure it restricts the
 diagnosis to that crop (farm photos 75.2% → 79.4%) or, for an unsupported plant such as pear or betel,
 returns a 422 naming the plant. It is not used on lab-style photos (71% crop accuracy there, vs ~99% for
@@ -91,10 +93,10 @@ Accuracy with the crop on Auto-detect, on held-out test photos:
 
 | Model | Lab-style photos (500) | Farm photos (432) |
 | :--- | :--- | :--- |
-| **Auto** (default): router picks per photo | **99.6%** | **80.3%** |
+| **Auto** (default): router picks per photo | **99.6%** | **78.5%** (80.3% with BioCLIP-2 on) |
 | Lab model (PlantVillage) | **99.8%** | 12.3% |
 | Farm model | 37.2% | 78.5% |
-| Farm model + BioCLIP-2 crop identification | 47.8% | **80.3%** |
+| Farm model + BioCLIP-2 (only listed when BioCLIP-2 is enabled) | 47.8% | **80.3%** |
 
 Farm-photo column: PlantDoc test set; the farm model also scores 71.0% (Auto) on the separate PlantWild
 test set. Each model is strong only on its own kind of photo, which is why Auto is the default. On farm photos

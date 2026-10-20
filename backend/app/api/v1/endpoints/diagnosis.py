@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from app.services.diagnosis_service import (
-    diagnosis_service, SUPPORTED_CROPS, MODEL_CHOICES, UnsupportedCropError, InvalidModelChoiceError,
+    diagnosis_service, SUPPORTED_CROPS, available_model_choices, UnsupportedCropError, InvalidModelChoiceError,
 )
 from app.db.session import get_db
 from app.models.db_models import DiagnosisLog
@@ -20,7 +20,7 @@ async def supported_crops():
 @router.get("/models")
 async def disease_models():
     """Disease-model choices for the model selector."""
-    return {"models": [{"id": k, "description": v} for k, v in MODEL_CHOICES.items()], "default": "auto"}
+    return {"models": [{"id": k, "description": v} for k, v in available_model_choices().items()], "default": "auto"}
 
 
 @router.post("/predict")

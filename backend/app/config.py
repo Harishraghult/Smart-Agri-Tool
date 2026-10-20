@@ -65,9 +65,10 @@ class Settings(BaseSettings):
     # Trained on the real Kaggle Crop Recommendation CSV (synthetic-data model kept in crop_recommender_synthetic/)
     CROP_RECOMMENDER_PATH: Path = MODELS / "crop_recommender.pkl"
 
-    # BioCLIP-2 plant species identification for crop auto-detect (~1.7 GB download on first start;
-    # set SPECIES_ID_ENABLED=false to skip it, e.g. on CPU-only machines where it is slow)
-    SPECIES_ID_ENABLED: bool = True
+    # BioCLIP-2 plant species identification for crop auto-detect. Off by default: with the PlantWild-trained
+    # farm model it adds only ~2 points, but it is a ~1.7 GB download and slow without a GPU. Set
+    # SPECIES_ID_ENABLED=true to turn it back on (it also rejects unsupported plants such as pear or betel).
+    SPECIES_ID_ENABLED: bool = False
 
     # Predictions below this confidence are flagged "low confidence" instead of shown as fact
     CONFIDENCE_THRESHOLD: float = 0.60

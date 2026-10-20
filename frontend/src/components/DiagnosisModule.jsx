@@ -13,6 +13,7 @@ export default function DiagnosisModule() {
   const [supportedCrops, setSupportedCrops] = useState([]);
   // Which disease model to run; 'auto' lets the image router pick per photo
   const [modelChoice, setModelChoice] = useState('auto');
+  const [availableModels, setAvailableModels] = useState(['auto', 'lab', 'farm']);
 
   const MODEL_LABELS = {
     auto: 'Auto (recommended): picks Lab or Farm per photo',
@@ -22,6 +23,10 @@ export default function DiagnosisModule() {
   };
 
   useEffect(() => {
+    fetch('/api/v1/diagnosis/models')
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((data) => setAvailableModels(data.models.map((m) => m.id)))
+      .catch(() => {});
     fetch('/api/v1/diagnosis/crops')
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((data) => setSupportedCrops(data.crops))
@@ -149,7 +154,7 @@ export default function DiagnosisModule() {
                 disabled={loading}
                 style={{ flex: 1, padding: '8px 10px', borderRadius: '10px', background: 'rgba(15,23,42,0.8)', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.15)' }}
               >
-                {Object.entries(MODEL_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+                {availableModels.map((id) => <option key={id} value={id}>{MODEL_LABELS[id] || id}</option>)}
               </select>
             </label>
             <label className="dropzone" style={{ display: 'block' }}>
