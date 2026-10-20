@@ -143,3 +143,36 @@ def test_bad_chat_messages_rejected(message):
 
 def test_unicode_chat_message_ok():
     assert client.post("/api/v1/chat/message", json={"message": "தக்காளி இலை நோய் 🍅"}).status_code == 200
+
+
+# --- Crop selection ---
+
+def test_supported_crops_listed():
+    crops = client.get("/api/v1/diagnosis/crops").json()["crops"]
+    assert "Potato" in crops and "Tomato" in crops
+
+
+@pytest.mark.parametrize("crop", ["Pear", "Betel", "Cassava"])
+def test_unsupported_crop_rejected_with_reason(crop):
+    r = client.post("/api/v1/diagnosis/predict", files={"file": ("x", encode(leaf()), "image/jpeg")},
+                    data={"crop_type": crop})
+    assert r.status_code == 422
+    assert "not supported" in r.json()["detail"]
+
+
+@needs_models
+@pytest.mark.parametrize("crop", ["Potato", "potato", "Pepper,_bell", "maize"])
+def test_selected_crop_restricts_diagnosis(crop):
+    data = client.post("/api/v1/diagnosis/predict", files={"file": ("x", encode(leaf()), "image/jpeg")},
+                       data={"crop_type": crop}).json()
+    prefix = {"potato": "Potato", "pepper,_bell": "Pepper,_bell", "maize": "Corn_(maize)"}[crop.lower()]
+    assert data["predicted_class"].startswith(prefix)
+    assert all(c["class"].startswith(prefix) for c in data["top_candidates"])
+    assert data["crop_selected"]
+
+
+@needs_models
+def test_correct_crop_keeps_correct_diagnosis():
+    data = client.post("/api/v1/diagnosis/predict", files={"file": ("x", encode(leaf()), "image/jpeg")},
+                       data={"crop_type": "Tomato"}).json()
+    assert data["predicted_class"] == "Tomato___Early_blight"

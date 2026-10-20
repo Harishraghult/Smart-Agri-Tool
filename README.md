@@ -70,6 +70,13 @@ Every API response carries an `inference_engine` field saying whether a trained 
 
 ---
 
+## 🌾 Crop Selection
+
+The Diagnosis tab asks for the crop (or "Auto-detect"). A selected crop restricts the diagnosis to that
+crop's diseases, which fixes cross-crop mistakes (a potato leaf read as tomato): field-photo accuracy
+75.2% → 85.0%. Crops outside the 14 supported ones (`GET /api/v1/diagnosis/crops`) get a 422 explaining
+that a diagnosis would be a guess, instead of a wrong answer.
+
 ## 🧹 Input Validation & Image Preprocessing
 
 Applied to every image upload (`backend/app/services/image_utils.py`); each response lists the steps in `preprocessing`:
@@ -198,6 +205,8 @@ python training/disease_classifier/train.py                    # -> checkpoints/
 python training/crop_recommender/train.py                      # -> models/crop_recommender.pkl
 python training/field_classifiers/train.py --task pest         # -> models/pest_classifier.pt
 python training/field_classifiers/train.py --task weed         # -> models/weed_classifier.pt
+python scripts/prepare_plantdoc_crops.py                       # leaf crops from PlantDoc boxes (val/test duplicates removed)
+python training/disease_classifier/train_field.py              # -> models/disease_classifier_field.pt
 python training/image_router/train.py                          # -> models/image_router.pt
 python training/ripeness_classifier/train.py --skip-stage1 --epochs-stage2 8 --lr-stage2 3e-4
                                                                # -> models/ripeness_stage2_banana.pt
@@ -221,11 +230,11 @@ Measured on held-out test splits through the backend's own inference code (`app/
 | Model Track | Architecture | Dataset | Test Accuracy | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | **Disease Classifier** | EfficientNet-B0 | PlantVillage (38 classes, pHash-deduplicated split) | **98.9%** lab photos (1,500, routed) | ✅ Served |
-| **Disease (field photos)** | EfficientNet-B0 | PlantDoc fine-tune | **64.4%** (432); 83.8% when ≥60% confident | ✅ Served via router |
+| **Disease (field photos)** | EfficientNet-B0, 288 px | PlantDoc photos + 6.7k leaf crops from PlantDoc boxes | **75.2%** auto-detected crop, **85.0%** with crop selected (432) | ✅ Served via router |
 | **Image-type Router** | EfficientNet-B0 | lab leaf / field leaf / fruit / other | **99.7%** (1,600) | ✅ Served |
 | **Ripeness Classifier** | EfficientNet-B0 | Banana Ripeness (4 classes) | **99.1%** (562 test imgs) | ✅ Served |
-| **Pest Classifier** | EfficientNet-B0 | Agricultural Pests (12) + `no_pest` | **91.7%** on pests, 0.7% false-pest rate on plain leaves | ✅ Served |
-| **Weed Classifier** | EfficientNet-B0 | DeepWeeds (9 classes) | **96.2%** (3,507 test imgs) | ✅ Served |
+| **Pest Classifier** | EfficientNet-B0 | Agricultural Pests (12) + `no_pest` (lab + outdoor leaves + field scenes) | **92.8%** on pests; false alarms on outdoor leaves 1.4% (was 38%) | ✅ Served |
+| **Weed Classifier** | EfficientNet-B0 | DeepWeeds (9) + crop-leaf negatives | **96.8%** (3,507); false alarms on outdoor leaves 0.5% (was 15%) | ✅ Served |
 | **Crop Recommender** | XGBoost | Kaggle Crop Recommendation (real CSV) | **99.1%** (330 test rows) | ✅ Served |
 | Lesion Severity | ResNet34 U-Net | — (no lesion masks) | — | ❌ Untrained, HSV heuristic used |
 | Pest / Weed Detectors | YOLOv8-nano | — (no box labels) | — | ❌ Untrained |

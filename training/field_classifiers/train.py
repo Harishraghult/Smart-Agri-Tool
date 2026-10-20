@@ -5,9 +5,12 @@ Two tasks, served by backend/app/services/field_service.py:
 
   pest  - 12-class Agricultural Pests dataset (ants, bees, beetle, ... weevil).
           Uses the leakage-safe pHash split already produced on disk (train/val/test folders).
-          A 13th "no_pest" class is sampled from PlantVillage leaf photos so that a plain leaf
-          is not forced into one of the 12 pest species.
+          A 13th "no_pest" class holds pest-free photos so a plain leaf is not forced into a pest
+          species: lab leaves (PlantVillage), outdoor leaves (PlantDoc) and field scenes (DeepWeeds
+          "Negative"). Lab leaves alone were not enough: outdoor leaves were called "caterpillar".
   weed  - DeepWeeds (8 weed species + "Negative"), using the official subset0 train/val/test CSVs.
+          Crop-leaf close-ups (PlantVillage + PlantDoc) are added to "Negative", since DeepWeeds
+          alone made any leaf close-up look like a weed species.
 
 Usage:
     python training/field_classifiers/train.py --task pest
@@ -80,20 +83,44 @@ class ListImageDataset(Dataset):
         return self.transform(Image.open(self.paths[idx]).convert("RGB")), self.label
 
 
-def sample_negatives(neg_dir, label, per_split, seed=42):
-    """Leaf photos (no pest) from PlantVillage train/test folders, split train/val/test."""
+EXTS = {".jpg", ".jpeg", ".png"}
+
+
+def _images(folder):
+    return sorted(p for p in Path(folder).rglob("*") if p.suffix.lower() in EXTS)
+
+
+def negative_pools(data_root, sources):
+    """{split: [paths]} of non-target photos, each source taken from its own split (no leakage)."""
+    rng = random.Random(42)
+    pv, pd = data_root / "processed" / "plantvillage", data_root / "processed" / "plantdoc"
+    pools = {"train": [], "val": [], "test": []}
+    if "plantvillage" in sources:  # no val split on disk: carve it from train
+        pv_train = _images(pv / "train")
+        rng.shuffle(pv_train)
+        pools["val"].append(pv_train[:400])
+        pools["train"].append(pv_train[400:])
+        pools["test"].append(_images(pv / "test"))
+    if "plantdoc" in sources:
+        for split in pools:
+            pools[split].append(_images(pd / split))
+    if "deepweeds_negative" in sources:
+        dw = data_root / "raw" / "deepweeds"
+        for split in pools:
+            with open(dw / "labels" / f"{split}_subset0.csv", newline="") as f:
+                pools[split].append([dw / "images" / r["Filename"] for r in csv.DictReader(f) if r["Label"] == "8"])
+    return pools
+
+
+def balanced_sample(source_lists, total, seed=42):
+    """Draw `total` paths spread evenly across sources."""
     rng = random.Random(seed)
-    exts = {".jpg", ".jpeg", ".png"}
-    pool_train = sorted(p for p in (neg_dir / "train").rglob("*") if p.suffix.lower() in exts)
-    pool_test = sorted(p for p in (neg_dir / "test").rglob("*") if p.suffix.lower() in exts)
-    rng.shuffle(pool_train)
-    rng.shuffle(pool_test)
-    n_tr, n_va, n_te = per_split
-    return {
-        "train": ListImageDataset(pool_train[:n_tr], label, TRAIN_TRANSFORM),
-        "val": ListImageDataset(pool_train[n_tr:n_tr + n_va], label, EVAL_TRANSFORM),
-        "test": ListImageDataset(pool_test[:n_te], label, EVAL_TRANSFORM),
-    }
+    out, per = [], max(1, total // max(len(source_lists), 1))
+    for paths in source_lists:
+        paths = list(paths)
+        rng.shuffle(paths)
+        out += paths[:per]
+    return out
 
 
 def rgb_loader(path):
@@ -102,6 +129,7 @@ def rgb_loader(path):
 
 
 def build_datasets(args):
+    pools = negative_pools(args.data_root, set(args.negative_sources))
     if args.task == "pest":
         splits = {
             s: datasets.ImageFolder(args.data_dir / s, TRAIN_TRANSFORM if s == "train" else EVAL_TRANSFORM,
@@ -109,17 +137,21 @@ def build_datasets(args):
             for s in ("train", "val", "test")
         }
         class_names = list(splits["train"].classes)
-        if args.negatives_dir and args.negatives_dir.exists():
-            per_split = tuple(len(splits[s]) // len(class_names) for s in ("train", "val", "test"))
-            negs = sample_negatives(args.negatives_dir, len(class_names), per_split)
-            splits = {s: ConcatDataset([splits[s], negs[s]]) for s in splits}
-            class_names.append("no_pest")
-        return splits, class_names
-    splits = {
-        s: CsvImageDataset(args.labels_dir / f"{s}_subset0.csv", args.images_dir,
-                           TRAIN_TRANSFORM if s == "train" else EVAL_TRANSFORM)
-        for s in ("train", "val", "test")
-    }
+        label = len(class_names)
+        for s in splits:
+            # no_pest gets ~2x a pest class's size because it must cover far more visual variety
+            n = 2 * len(splits[s]) // len(class_names)
+            negs = ListImageDataset(balanced_sample(pools[s], n), label, TRAIN_TRANSFORM if s == "train" else EVAL_TRANSFORM)
+            splits[s] = ConcatDataset([splits[s], negs])
+        return splits, class_names + ["no_pest"]
+    splits = {}
+    for s in ("train", "val", "test"):
+        weeds = CsvImageDataset(args.labels_dir / f"{s}_subset0.csv", args.images_dir,
+                                TRAIN_TRANSFORM if s == "train" else EVAL_TRANSFORM)
+        n = {"train": 2000, "val": 400, "test": 400}[s]
+        crop_leaves = ListImageDataset(balanced_sample(pools[s], n), DEEPWEEDS_CLASSES.index("Negative"),
+                                       TRAIN_TRANSFORM if s == "train" else EVAL_TRANSFORM)
+        splits[s] = ConcatDataset([weeds, crop_leaves])
     return splits, DEEPWEEDS_CLASSES
 
 
@@ -138,7 +170,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--task", choices=["pest", "weed"], required=True)
     parser.add_argument("--data-dir", type=Path, default=Path("data/processed/agricultural_pests"))
-    parser.add_argument("--negatives-dir", type=Path, default=Path("data/processed/plantvillage"))
+    parser.add_argument("--data-root", type=Path, default=Path("data"))
+    parser.add_argument("--negative-sources", nargs="+", default=None,
+                        help="default: pest -> plantvillage plantdoc deepweeds_negative; weed -> plantvillage plantdoc")
     parser.add_argument("--images-dir", type=Path, default=Path("data/raw/deepweeds/images"))
     parser.add_argument("--labels-dir", type=Path, default=Path("data/raw/deepweeds/labels"))
     parser.add_argument("--output-dir", type=Path, default=Path("models"))
@@ -147,6 +181,9 @@ def main():
     parser.add_argument("--lr", type=float, default=3e-4)
     parser.add_argument("--workers", type=int, default=4)
     args = parser.parse_args()
+    if args.negative_sources is None:
+        args.negative_sources = (["plantvillage", "plantdoc", "deepweeds_negative"] if args.task == "pest"
+                                 else ["plantvillage", "plantdoc"])
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     splits, class_names = build_datasets(args)

@@ -2,12 +2,18 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from sqlalchemy.orm import Session
 from typing import Optional
 
-from app.services.diagnosis_service import diagnosis_service
+from app.services.diagnosis_service import diagnosis_service, SUPPORTED_CROPS, UnsupportedCropError
 from app.db.session import get_db
 from app.models.db_models import DiagnosisLog
 from app.services.image_utils import ImageValidationError
 
 router = APIRouter()
+
+@router.get("/crops")
+async def supported_crops():
+    """Crops the disease models can diagnose (for the crop selector)."""
+    return {"crops": list(SUPPORTED_CROPS)}
+
 
 @router.post("/predict")
 async def predict_disease(
@@ -27,7 +33,9 @@ async def predict_disease(
         raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
     try:
-        result = diagnosis_service.predict(image_bytes)
+        result = diagnosis_service.predict(image_bytes, crop_type)
+    except UnsupportedCropError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     except ImageValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

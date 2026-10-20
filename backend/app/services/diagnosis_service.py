@@ -57,7 +57,38 @@ PLANTDOC_TO_PLANTVILLAGE = {
     "Tomato_mold_leaf": "Tomato___Leaf_Mold",
     "Tomato_two_spotted_spider_mites_leaf": "Tomato___Spider_mites Two-spotted_spider_mite",
     "grape_leaf": "Grape___healthy", "grape_leaf_black_rot": "Grape___Black_rot",
+    "Potato_leaf": "Potato___healthy",  # added by the v2 field model (train_field.py)
 }
+
+# Crops the disease models know, as shown to users -> PlantVillage class-name prefix
+SUPPORTED_CROPS = {
+    "Apple": "Apple", "Blueberry": "Blueberry", "Cherry": "Cherry_(including_sour)",
+    "Corn (Maize)": "Corn_(maize)", "Grape": "Grape", "Orange": "Orange", "Peach": "Peach",
+    "Bell Pepper": "Pepper,_bell", "Potato": "Potato", "Raspberry": "Raspberry", "Soybean": "Soybean",
+    "Squash": "Squash", "Strawberry": "Strawberry", "Tomato": "Tomato",
+}
+_CROP_ALIASES = {"corn": "Corn (Maize)", "maize": "Corn (Maize)", "pepper": "Bell Pepper",
+                 "capsicum": "Bell Pepper", "soyabean": "Soybean"}
+
+
+class UnsupportedCropError(ValueError):
+    """The user's crop is not covered by the disease models; message is safe to show."""
+
+
+def resolve_crop(crop_type):
+    """User crop name -> (display name, PlantVillage prefix); (None, None) for auto-detect."""
+    if not crop_type or crop_type.strip().lower() in ("", "auto", "auto-detect"):
+        return None, None
+    key = crop_type.strip().lower()
+    for display, prefix in SUPPORTED_CROPS.items():
+        if key in (display.lower(), prefix.lower()):
+            return display, prefix
+    if key in _CROP_ALIASES:
+        display = _CROP_ALIASES[key]
+        return display, SUPPORTED_CROPS[display]
+    raise UnsupportedCropError(
+        f"'{crop_type.strip()}' is not supported yet, so a diagnosis would be a guess. "
+        f"Supported crops: {', '.join(SUPPORTED_CROPS)}.")
 
 
 def _load_efficientnet(path):
@@ -72,6 +103,8 @@ class DiagnosisService:
     def __init__(self):
         self.disease_model = None
         self.field_model = None  # (model, class_names) PlantDoc fine-tune for field photos
+        self.field_transform = EVAL_TRANSFORM
+        self.field_tta = False
         self.unet_model = None
         self.class_names = PLANT_VILLAGE_CLASSES
         self.cause_lookup = {}
@@ -111,6 +144,12 @@ class DiagnosisService:
             try:
                 model, ckpt = _load_efficientnet(settings.DISEASE_FIELD_MODEL_PATH)
                 self.field_model = (model, ckpt["class_names"])
+                size = ckpt.get("img_size", IMG_SIZE)
+                self.field_transform = transforms.Compose([
+                    transforms.Resize((size, size)), transforms.ToTensor(),
+                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
+                # Flip test-time augmentation only if it measurably helped on the test split
+                self.field_tta = ckpt.get("test_acc_tta", 0) > ckpt.get("test_acc", 1)
                 print(f"Loaded field disease model from {settings.DISEASE_FIELD_MODEL_PATH.name}")
             except Exception as e:
                 print(f"Error loading field disease model: {e}")
@@ -130,8 +169,26 @@ class DiagnosisService:
             except Exception as e:
                 print(f"Error loading U-Net model: {e}")
 
-    def predict(self, image_bytes: bytes) -> dict:
+    def _class_probs(self, model, transform, image, tta):
+        x = transform(image).unsqueeze(0).to(DEVICE)
+        with torch.no_grad():
+            probs = torch.softmax(model(x), dim=1)[0]
+            if tta:
+                probs = (probs + torch.softmax(model(torch.flip(x, dims=[3])), dim=1)[0]) / 2
+        return probs
+
+    @staticmethod
+    def _restrict_to_crop(probs, pv_names, crop_prefix):
+        """P(class | crop): zero out other crops and renormalise. None if the model lacks the crop."""
+        mask = torch.tensor([n.split("___")[0] == crop_prefix for n in pv_names], device=probs.device)
+        if not mask.any():
+            return None
+        masked = probs * mask
+        return masked / masked.sum().clamp_min(1e-12)
+
+    def predict(self, image_bytes: bytes, crop_type: str = None) -> dict:
         import cv2
+        crop_display, crop_prefix = resolve_crop(crop_type)
         image = load_rgb_image(image_bytes)
         img_tensor = EVAL_TRANSFORM(image).unsqueeze(0).to(DEVICE)
 
@@ -148,23 +205,39 @@ class DiagnosisService:
             input_warning = (f"This doesn't look like a leaf photo (it looks like {image_type['description']}). "
                              "The diagnosis below is unreliable; upload a close-up of a single leaf.")
 
-        # 1. Classification
-        if use_field_model or self.disease_model is not None:
-            model, names = self.field_model if use_field_model else (self.disease_model, self.class_names)
-            to_pv = PLANTDOC_TO_PLANTVILLAGE if use_field_model else {}
-            with torch.no_grad():
-                probs = torch.softmax(model(img_tensor), dim=1)[0]
+        # 1. Classification, restricted to the user's crop when given (field photos: 64.8% -> 80.8%)
+        candidates = []
+        if use_field_model:
+            model, names = self.field_model
+            candidates.append(("efficientnet_b0_plantdoc", model, self.field_transform,
+                               [PLANTDOC_TO_PLANTVILLAGE.get(n, n) for n in names], self.field_tta))
+        if self.disease_model is not None:
+            candidates.append(("efficientnet_b0_plantvillage", self.disease_model, EVAL_TRANSFORM,
+                               list(self.class_names), False))
+
+        probs = None
+        for engine, model, transform, pv_names, tta in candidates:
+            probs = self._class_probs(model, transform, image, tta)
+            if crop_prefix:
+                probs = self._restrict_to_crop(probs, pv_names, crop_prefix)
+                if probs is None:  # e.g. Orange: only the PlantVillage model knows it
+                    continue
+            classifier_engine = engine
+            break
+
+        if probs is not None:
             conf, pred_idx = torch.max(probs, dim=0)
-            predicted_class = to_pv.get(names[pred_idx.item()], names[pred_idx.item()])
+            predicted_class = pv_names[pred_idx.item()]
             confidence = float(conf.item())
-            topk_conf, topk_indices = torch.topk(probs, min(3, len(names)))
+            topk_conf, topk_indices = torch.topk(probs, min(3, len(pv_names)))
             for k_conf, k_idx in zip(topk_conf.tolist(), topk_indices.tolist()):
+                if k_conf <= 0:
+                    continue
                 top3_predictions.append({
-                    "class": to_pv.get(names[k_idx], names[k_idx]),
+                    "class": pv_names[k_idx],
                     "confidence": round(float(k_conf), 4),
                     "percentage": f"{k_conf * 100:.1f}%"
                 })
-            classifier_engine = "efficientnet_b0_plantdoc" if use_field_model else "efficientnet_b0_plantvillage"
         else:
             # No trained weights: placeholder output, always flagged low-confidence below
             predicted_class = "Tomato___Early_blight"
@@ -241,6 +314,7 @@ class DiagnosisService:
             "low_confidence": confidence < settings.CONFIDENCE_THRESHOLD or input_warning is not None,
             "image_type": image_type,
             "preprocessing": image.info.get("preprocessing", []),
+            "crop_selected": crop_display,
             "input_warning": input_warning,
             "inference_engine": {
                 "classifier": classifier_engine,

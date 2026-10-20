@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { postForm, loadSampleFile, errorMessage } from '../api';
 import { UploadCloud, CheckCircle2, AlertTriangle, Bug, Activity, FileText, Sparkles } from 'lucide-react';
 
@@ -8,6 +8,16 @@ export default function DiagnosisModule() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  // 'auto' = let the model guess the crop; picking it restricts the diagnosis to that crop's diseases
+  const [crop, setCrop] = useState('auto');
+  const [supportedCrops, setSupportedCrops] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/v1/diagnosis/crops')
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((data) => setSupportedCrops(data.crops))
+      .catch(() => setSupportedCrops([]));
+  }, []);
 
   const handleFileChange = (e) => {
     const selected = e.target.files[0];
@@ -19,17 +29,22 @@ export default function DiagnosisModule() {
   };
 
   const SAMPLES = {
-    early_blight: 'tomato_early_blight.jpg',
-    late_blight: 'potato_late_blight.jpg',
-    healthy: 'tomato_healthy.jpg',
+    early_blight: { file: 'tomato_early_blight.jpg', crop: 'Tomato' },
+    late_blight: { file: 'potato_late_blight.jpg', crop: 'Potato' },
+    healthy: { file: 'tomato_healthy.jpg', crop: 'Tomato' },
   };
 
-  const runDiagnosis = async (imageFile) => {
-    setLoading(true);
+  const runDiagnosis = async (imageFile, cropChoice = crop) => {
     setResult(null);
     setError(null);
+    if (cropChoice === 'other') {
+      setError(`Your crop isn't supported yet, so any diagnosis would be a guess. Supported crops: ${supportedCrops.join(', ')}.`);
+      return;
+    }
+    setLoading(true);
     const formData = new FormData();
     formData.append('file', imageFile);
+    if (cropChoice !== 'auto') formData.append('crop_type', cropChoice);
     try {
       setResult(await postForm('/api/v1/diagnosis/predict', formData));
     } catch (err) {
@@ -42,10 +57,12 @@ export default function DiagnosisModule() {
 
   const handleSampleClick = async (sampleType) => {
     try {
-      const sampleFile = await loadSampleFile(SAMPLES[sampleType]);
+      const sample = SAMPLES[sampleType];
+      const sampleFile = await loadSampleFile(sample.file);
       setFile(sampleFile);
       setPreview(URL.createObjectURL(sampleFile));
-      await runDiagnosis(sampleFile);
+      setCrop(sample.crop);
+      await runDiagnosis(sampleFile, sample.crop);
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -70,7 +87,7 @@ export default function DiagnosisModule() {
       <div className="glass-panel" style={{ padding: '24px' }}>
         <h3 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>Plant Disease & Pathology Diagnosis</h3>
         <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '24px' }}>
-          Upload a high-resolution leaf image or click a sample below to run EfficientNet-B0 disease classification (38 PlantVillage classes) and lesion severity scoring.
+          Upload a high-resolution leaf image or click a sample below to run disease classification and lesion severity scoring. Selecting your crop makes the diagnosis noticeably more accurate.
         </p>
 
         {/* Sample Selection Quick Buttons */}
@@ -90,8 +107,20 @@ export default function DiagnosisModule() {
         </div>
 
         <div className="grid-2">
-          {/* Upload Dropzone */}
+          {/* Crop selector + Upload Dropzone */}
           <div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}>
+              Crop:
+              <select
+                value={crop}
+                onChange={(e) => setCrop(e.target.value)}
+                style={{ flex: 1, padding: '8px 10px', borderRadius: '10px', background: 'rgba(15,23,42,0.8)', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.15)' }}
+              >
+                <option value="auto">Auto-detect (less accurate)</option>
+                {supportedCrops.map((c) => <option key={c} value={c}>{c}</option>)}
+                <option value="other">Other / not listed</option>
+              </select>
+            </label>
             <label className="dropzone" style={{ display: 'block' }}>
               <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
               <div className="dropzone-icon">
@@ -124,6 +153,7 @@ export default function DiagnosisModule() {
               <li>Capture singular leaf flat against neutral background</li>
               <li>Ensure leaf surface is well-lit without glare</li>
               <li>Focus on clear symptomatic lesions or discoloration</li>
+              <li>Select your crop: it restricts the diagnosis to that crop's diseases</li>
               <li>CNN output will categorize into Pathogen / Pest / Deficiency</li>
             </ul>
           </div>
@@ -155,6 +185,11 @@ export default function DiagnosisModule() {
                 <h3 style={{ fontSize: '1.5rem', marginTop: '8px', color: '#ffffff' }}>
                   {result.crop_type} — {result.condition}
                 </h3>
+                <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '4px' }}>
+                  {result.crop_selected
+                    ? `Crop: ${result.crop_selected} (selected by you)`
+                    : 'Crop auto-detected. If it is wrong, select your crop above and diagnose again.'}
+                </p>
                 {result.pathogen_name && (
                   <p style={{ color: '#10b981', fontStyle: 'italic', fontSize: '0.9rem', marginTop: '2px' }}>
                     Pathogen: {result.pathogen_name} ({result.pathogen_type})
@@ -169,6 +204,19 @@ export default function DiagnosisModule() {
                 </p>
               </div>
             </div>
+
+            {/* Top candidates: the right answer is in the top 3 far more often than at #1 */}
+            {result.top_candidates?.length > 1 && (
+              <div style={{ marginBottom: '16px' }}>
+                <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '6px' }}>Top possibilities</p>
+                {result.top_candidates.map((c, i) => (
+                  <div key={c.class} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '4px 0', color: i === 0 ? '#f8fafc' : '#94a3b8' }}>
+                    <span>{i + 1}. {c.class.replace(/___/g, ' — ').replace(/_/g, ' ')}</span>
+                    <span>{c.percentage}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Severity Meter */}
             <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '12px', marginBottom: '20px' }}>
