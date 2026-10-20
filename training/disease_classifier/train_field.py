@@ -9,12 +9,16 @@ Changes vs. the original stage-2 PlantDoc fine-tune (63% val, still improving wh
   * Init from the PlantVillage model (disease features), new 29-class head.
   * 288 px input, TrivialAugment + RandomErasing, label smoothing, class-balanced sampling
     (some classes have 2 training photos), AdamW + cosine schedule, 25 epochs.
+  * Optional PlantWild in-the-wild photos mapped onto these classes (scripts/prepare_plantwild.py,
+    CC-BY-NC-ND: non-commercial use), which also adds 5 classes. Its val split joins model selection;
+    its test split is reported separately.
   * Validation / test are the untouched PlantDoc val/test whole photos (what users upload).
 
 Usage:
     python training/disease_classifier/train_field.py
 Output: <output-dir>/disease_classifier_field.pt
-        ({model_state_dict, class_names, img_size, val_acc, test_acc, test_acc_tta, epoch})
+        ({model_state_dict, class_names, img_size, val_acc, test_acc, test_acc_tta,
+          test_acc_plantwild, epoch}); test_acc is always the PlantDoc test set, for comparability
 """
 
 import argparse
@@ -72,6 +76,8 @@ def main():
     parser.add_argument("--plantdoc-dir", type=Path, default=Path("data/processed/plantdoc"))
     parser.add_argument("--crops-dir", type=Path, default=Path("data/processed/plantdoc_crops/train"))
     parser.add_argument("--plantvillage-dir", type=Path, default=Path("data/processed/plantvillage"))
+    parser.add_argument("--plantwild-dir", type=Path, default=Path("data/processed/plantwild_mapped"),
+                        help="pass a non-existent path to train without PlantWild")
     parser.add_argument("--init-checkpoint", type=Path, default=Path("checkpoints/model_stage1_plantvillage.pt"))
     parser.add_argument("--output-dir", type=Path, default=Path("models"))
     parser.add_argument("--img-size", type=int, default=288)
@@ -97,19 +103,24 @@ def main():
 
     whole = {s: images_by_class(args.plantdoc_dir / s) for s in ("train", "val", "test")}
     crops = images_by_class(args.crops_dir)
-    class_names = sorted(set(whole["train"]) | set(crops))
+    wild = {s: images_by_class(args.plantwild_dir / s) for s in ("train", "val", "test")}
+    class_names = sorted(set(whole["train"]) | set(crops) | set(wild["train"]))
     idx = {c: i for i, c in enumerate(class_names)}
 
     train_items = [(p, idx[c]) for c, ps in whole["train"].items() for p in ps]
     train_items += [(p, idx[c]) for c, ps in crops.items() for p in ps]
+    train_items += [(p, idx[c]) for c, ps in wild["train"].items() for p in ps]
     if "Potato_leaf" in idx:  # top up the healthy-potato class from PlantVillage's train split
         pv_potato = images_by_class(args.plantvillage_dir / "train").get("Potato___healthy", [])
         train_items += [(p, idx["Potato_leaf"]) for p in pv_potato]
     val_items = [(p, idx[c]) for c, ps in whole["val"].items() if c in idx for p in ps]
+    val_items += [(p, idx[c]) for c, ps in wild["val"].items() if c in idx for p in ps]
     test_items = [(p, idx[c]) for c, ps in whole["test"].items() if c in idx for p in ps]
+    wild_test_items = [(p, idx[c]) for c, ps in wild["test"].items() if c in idx for p in ps]
 
     counts = Counter(y for _, y in train_items)
-    print(f"{len(class_names)} classes | train {len(train_items)} | val {len(val_items)} | test {len(test_items)}")
+    print(f"{len(class_names)} classes | train {len(train_items)} | val {len(val_items)} | "
+          f"test PlantDoc {len(test_items)} + PlantWild {len(wild_test_items)}")
     print("smallest train classes:", sorted(((class_names[k], v) for k, v in counts.items()), key=lambda t: t[1])[:5])
 
     # Inverse-sqrt frequency: rare classes are seen more often without fully oversampling 2-image classes
@@ -119,6 +130,8 @@ def main():
                               num_workers=args.workers, pin_memory=True, persistent_workers=True)
     val_loader = DataLoader(ListDataset(val_items, eval_tf), batch_size=64, num_workers=args.workers)
     test_loader = DataLoader(ListDataset(test_items, eval_tf), batch_size=64, num_workers=args.workers)
+    wild_test_loader = (DataLoader(ListDataset(wild_test_items, eval_tf), batch_size=64, num_workers=args.workers)
+                        if wild_test_items else None)
 
     model = models.efficientnet_b0(weights=None)
     init = torch.load(args.init_checkpoint, map_location="cpu")
@@ -158,9 +171,11 @@ def main():
     model.load_state_dict(ckpt["model_state_dict"])
     ckpt["test_acc"] = evaluate(model, test_loader)
     ckpt["test_acc_tta"] = evaluate(model, test_loader, tta=True)
+    if wild_test_loader:
+        ckpt["test_acc_plantwild"] = evaluate(model, wild_test_loader)
     torch.save(ckpt, ckpt_path)
-    print(f"Best val_acc={best_val:.4f} test_acc={ckpt['test_acc']:.4f} "
-          f"test_acc_tta={ckpt['test_acc_tta']:.4f} -> {ckpt_path}")
+    print(f"Best val_acc={best_val:.4f} test_acc(PlantDoc)={ckpt['test_acc']:.4f} "
+          f"test_acc_tta={ckpt['test_acc_tta']:.4f} test_acc(PlantWild)={ckpt.get('test_acc_plantwild')} -> {ckpt_path}")
 
 
 if __name__ == "__main__":

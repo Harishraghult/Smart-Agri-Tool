@@ -220,3 +220,17 @@ def test_model_choice_selects_model(choice, engine):
                        data={"model": choice, "crop_type": "Tomato"}).json()
     assert data["model_choice"] == choice
     assert data["inference_engine"]["classifier"] == engine
+
+
+# --- Knowledge base coverage ---
+
+def test_every_predictable_class_has_knowledge_base_entry():
+    from app.services.diagnosis_service import PLANT_VILLAGE_CLASSES, PLANTDOC_TO_PLANTVILLAGE
+    kb = diagnosis_service.cause_lookup
+    reachable = set(PLANT_VILLAGE_CLASSES) | set(PLANTDOC_TO_PLANTVILLAGE.values())
+    if diagnosis_service.field_model is not None:
+        _, names = diagnosis_service.field_model
+        unmapped = [n for n in names if n not in PLANTDOC_TO_PLANTVILLAGE]
+        assert not unmapped, f"field-model classes without a PlantVillage mapping: {unmapped}"
+    missing = sorted(c for c in reachable if c not in kb)
+    assert not missing, f"no knowledge-base entry for: {missing}"

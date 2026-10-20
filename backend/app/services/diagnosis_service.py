@@ -59,6 +59,10 @@ PLANTDOC_TO_PLANTVILLAGE = {
     "Tomato_two_spotted_spider_mites_leaf": "Tomato___Spider_mites Two-spotted_spider_mite",
     "grape_leaf": "Grape___healthy", "grape_leaf_black_rot": "Grape___Black_rot",
     "Potato_leaf": "Potato___healthy",  # added by the v2 field model (train_field.py)
+    # added with the PlantWild data (scripts/prepare_plantwild.py)
+    "Apple_black_rot": "Apple___Black_rot", "Cherry_powdery_mildew": "Cherry_(including_sour)___Powdery_mildew",
+    "Citrus_greening": "Orange___Haunglongbing_(Citrus_greening)", "Corn_leaf": "Corn_(maize)___healthy",
+    "Strawberry_leaf_scorch": "Strawberry___Leaf_scorch",
 }
 
 # Crops the disease models know, as shown to users -> PlantVillage class-name prefix
@@ -333,13 +337,12 @@ class DiagnosisService:
         kb_info = self.cause_lookup.get(predicted_class, {})
         cause_category = kb_info.get("cause_category", "pathogen" if "healthy" not in condition.lower() else "none")
         pathogen_type = kb_info.get("pathogen_type", "fungus" if cause_category == "pathogen" else "none")
-        pathogen_name = kb_info.get("pathogen_name", "Alternaria solani" if "Early_blight" in predicted_class else None)
-        symptoms = kb_info.get("symptoms", ["Dark concentric spots on leaves", "Lower leaf yellowing"])
+        pathogen_name = kb_info.get("pathogen_name")
+        # No curated entry: say so rather than borrowing another disease's symptoms and treatments
+        symptoms = kb_info.get("symptoms", [])
         remedies = kb_info.get("remedies", [
-            "Apply copper-based fungicide preventatively",
-            "Remove and destroy heavily infected lower leaves",
-            "Ensure proper spacing for ventilation",
-            "Avoid overhead irrigation to reduce leaf moisture"
+            "No curated treatment for this diagnosis yet",
+            "Confirm with your local agricultural extension officer before applying any chemicals",
         ])
 
         return {
