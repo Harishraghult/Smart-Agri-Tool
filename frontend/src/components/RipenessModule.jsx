@@ -124,7 +124,9 @@ export default function RipenessModule() {
       </div>
 
       {/* Results Display */}
-      {result?.low_confidence && (
+      {result?.input_warning && <div className="glass-panel warning-banner">{result.input_warning}</div>}
+
+      {result?.low_confidence && !result?.input_warning && (
         <div className="glass-panel warning-banner">
           Not confident: the top ripeness guess is only {(result.confidence * 100).toFixed(1)}%. Photograph a single banana against a plain background.
         </div>

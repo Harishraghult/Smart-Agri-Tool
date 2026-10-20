@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.services.field_service import field_service
 from app.db.session import get_db
 from app.models.db_models import FieldAnalysisLog
+from app.services.image_utils import ImageValidationError
 
 router = APIRouter()
 
@@ -14,14 +15,17 @@ async def analyze_field(
     """
     Field Intelligence: detects pest species & counts (YOLO), weed density (YOLO), and wilting/water stress (CNN).
     """
-    if not file.content_type.startswith("image/"):
+    if not (file.content_type or "").startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
 
     image_bytes = await file.read()
     if len(image_bytes) == 0:
         raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
-    result = field_service.analyze(image_bytes)
+    try:
+        result = field_service.analyze(image_bytes)
+    except ImageValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     # Log to DB
     try:

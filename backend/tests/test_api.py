@@ -9,7 +9,10 @@ client = TestClient(app)
 
 
 def create_dummy_image_bytes():
-    img = Image.new("RGB", (224, 224), color=(100, 180, 100))
+    # Textured (not solid) so it passes the blank-image check
+    import numpy as np
+    pixels = np.random.default_rng(0).integers(60, 200, (224, 224, 3), dtype=np.uint8)
+    img = Image.fromarray(pixels)
     buf = io.BytesIO()
     img.save(buf, format="JPEG")
     return buf.getvalue()

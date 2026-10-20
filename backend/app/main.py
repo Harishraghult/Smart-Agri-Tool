@@ -1,4 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -25,6 +28,20 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Standard 422 body, but long rejected inputs are truncated instead of echoed in full."""
+    errors = []
+    for err in exc.errors():
+        err = dict(err)
+        if isinstance(err.get("input"), str) and len(err["input"]) > 100:
+            err["input"] = err["input"][:100] + "…"
+        elif not isinstance(err.get("input"), (str, int, float, bool, type(None))):
+            err.pop("input", None)
+        errors.append(err)
+    return JSONResponse(status_code=422, content={"detail": jsonable_encoder(errors)})
+
 
 # Set up CORS
 app.add_middleware(

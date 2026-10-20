@@ -35,7 +35,7 @@ Every API response carries an `inference_engine` field saying whether a trained 
 ## 🚀 Key Modules & Capabilities
 
 ### 1. Leaf Disease Diagnosis Module
-- **Model:** EfficientNet-B0 trained on PlantVillage (38 classes). A PlantDoc fine-tuned checkpoint exists (`checkpoints/model_stage2_plantdoc.pt`) but only reaches 63% val accuracy, so it is not served.
+- **Models + routing:** an image-type router (`training/image_router/`, 99.7% test) sends single-leaf, plain-background photos to the PlantVillage EfficientNet-B0 (38 classes) and field photos to the PlantDoc fine-tune. On field photos the PlantVillage model alone is only 12.5% accurate while staying >90% confident; routed, field accuracy is 64.4% with 2 confidently-wrong answers instead of 154.
 - **Severity Scoring:** HSV colour segmentation of brown/chlorotic lesion pixels. The ResNet34 U-Net in `training/disease_segmentation/` is wired in but untrained (no lesion masks available).
 - **Low confidence:** predictions under 60% are flagged `low_confidence` and the UI shows the alternatives instead of a label.
 - **Pathology Knowledge Base:** Auto-maps disease classes to pathogen type (`pathogen`/`pest`/`deficiency`/`none`), pathogen scientific name, symptoms, and actionable remedies.
@@ -69,6 +69,20 @@ Every API response carries an `inference_engine` field saying whether a trained 
 - **Scope:** IPM (Integrated Pest Management), disease control, fertilizer dosage, and soil health.
 
 ---
+
+## 🧹 Input Validation & Image Preprocessing
+
+Applied to every image upload (`backend/app/services/image_utils.py`); each response lists the steps in `preprocessing`:
+
+| Step | When | Why |
+| :--- | :--- | :--- |
+| Reject (HTTP 400) | corrupt/truncated/non-image, < 32 px, > 8:1 strip, blank/single colour, > 15 MB | no model can judge these; previously they crashed (500) or got 98% confident nonsense |
+| EXIF orientation | phone photos with a rotation tag | model sees the leaf upright |
+| Transparency → white, 16-bit → 8-bit, CMYK/palette/grey → RGB | as needed | consistent model input |
+| Downscale to 2048 px | huge uploads | speed only (models see 224 px) |
+| Autocontrast | **only** when detected dark (p99 < 60) or hazy (p1–p99 range < 60) | dark-photo accuracy 10% → 90%; applying it to every photo would cost ~9 points, so it is conditional |
+
+Not corrected, because they could not be told apart from normal photos: colour casts and overexposure. Wrong-module uploads (a banana in Diagnosis, a leaf in Ripeness) and unclear images get an `input_warning` and `low_confidence: true`. Tabular and location inputs are range-checked (pH 0–14, humidity 0–100%, lat ±90, …) and values outside the crop model's training range are flagged in `out_of_range_features`.
 
 ## 🛠 Project Structure
 
@@ -184,6 +198,7 @@ python training/disease_classifier/train.py                    # -> checkpoints/
 python training/crop_recommender/train.py                      # -> models/crop_recommender.pkl
 python training/field_classifiers/train.py --task pest         # -> models/pest_classifier.pt
 python training/field_classifiers/train.py --task weed         # -> models/weed_classifier.pt
+python training/image_router/train.py                          # -> models/image_router.pt
 python training/ripeness_classifier/train.py --skip-stage1 --epochs-stage2 8 --lr-stage2 3e-4
                                                                # -> models/ripeness_stage2_banana.pt
 ```
@@ -205,12 +220,13 @@ Measured on held-out test splits through the backend's own inference code (`app/
 
 | Model Track | Architecture | Dataset | Test Accuracy | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Disease Classifier** | EfficientNet-B0 | PlantVillage (38 classes, pHash-deduplicated split) | **99.1%** (1,000 test imgs) | ✅ Served |
+| **Disease Classifier** | EfficientNet-B0 | PlantVillage (38 classes, pHash-deduplicated split) | **98.9%** lab photos (1,500, routed) | ✅ Served |
+| **Disease (field photos)** | EfficientNet-B0 | PlantDoc fine-tune | **64.4%** (432); 83.8% when ≥60% confident | ✅ Served via router |
+| **Image-type Router** | EfficientNet-B0 | lab leaf / field leaf / fruit / other | **99.7%** (1,600) | ✅ Served |
 | **Ripeness Classifier** | EfficientNet-B0 | Banana Ripeness (4 classes) | **99.1%** (562 test imgs) | ✅ Served |
 | **Pest Classifier** | EfficientNet-B0 | Agricultural Pests (12) + `no_pest` | **91.7%** on pests, 0.7% false-pest rate on plain leaves | ✅ Served |
 | **Weed Classifier** | EfficientNet-B0 | DeepWeeds (9 classes) | **96.2%** (3,507 test imgs) | ✅ Served |
 | **Crop Recommender** | XGBoost | Kaggle Crop Recommendation (real CSV) | **99.1%** (330 test rows) | ✅ Served |
-| Disease (field photos) | EfficientNet-B0 | PlantDoc fine-tune | 63.4% val | ⚠️ Not served |
 | Lesion Severity | ResNet34 U-Net | — (no lesion masks) | — | ❌ Untrained, HSV heuristic used |
 | Pest / Weed Detectors | YOLOv8-nano | — (no box labels) | — | ❌ Untrained |
 | Water Stress | EfficientNet-B0 | — (no real wilting data) | — | ❌ Untrained, colour index used |

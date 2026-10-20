@@ -6,6 +6,8 @@ from torchvision import models, transforms
 import numpy as np
 
 from app.config import settings
+from app.services.image_utils import load_rgb_image
+from app.services.image_router_service import image_router_service, UNCLEAR_IMAGE_WARNING
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 IMG_SIZE = 224
@@ -116,10 +118,17 @@ class FieldService:
 
     def analyze(self, image_bytes: bytes) -> dict:
         import cv2
-        image_pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        image_pil = load_rgb_image(image_bytes)
         img_np = np.array(image_pil)
         h_orig, w_orig = img_np.shape[:2]
         img_tensor = EVAL_TRANSFORM(image_pil).unsqueeze(0).to(DEVICE)
+
+        image_type = image_router_service.classify(image_pil)
+        input_warning = None
+        if image_type and image_type["uncertain"]:
+            input_warning = UNCLEAR_IMAGE_WARNING
+        elif image_type and image_type["type"] == "fruit":
+            input_warning = "This looks like a fruit close-up, not a field or crop photo; field results may be meaningless."
 
         # 1. Pest / Insect Scouting
         pests_detected = []
@@ -263,6 +272,9 @@ class FieldService:
 
         return {
             "field_health_score": field_health_score,
+            "image_type": image_type,
+            "preprocessing": image_pil.info.get("preprocessing", []),
+            "input_warning": input_warning,
             "inference_engine": {
                 "pest": "yolo" if self.pest_yolo is not None else ("efficientnet_b0" if self.pest_classifier else "heuristic"),
                 "weed": "yolo" if self.weed_yolo is not None else ("efficientnet_b0" if self.weed_classifier else "heuristic"),

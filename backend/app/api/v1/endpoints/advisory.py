@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 from app.services.weather_advisory_service import weather_advisory_service
@@ -7,9 +7,9 @@ from app.services.weather_advisory_service import weather_advisory_service
 router = APIRouter()
 
 class AdvisoryRequest(BaseModel):
-    latitude: float = 12.9716
-    longitude: float = 77.5946
-    crop_type: str = "Tomato"
+    latitude: float = Field(12.9716, ge=-90, le=90, allow_inf_nan=False)
+    longitude: float = Field(77.5946, ge=-180, le=180, allow_inf_nan=False)
+    crop_type: str = Field("Tomato", max_length=60)
     is_wilted: Optional[bool] = False
 
 @router.post("/recommend")
@@ -25,7 +25,7 @@ async def get_crop_advisory(req: AdvisoryRequest):
     )
 
 @router.get("/weather-forecast")
-async def get_weather(lat: float = 12.9716, lon: float = 77.5946):
+async def get_weather(lat: float = Query(12.9716, ge=-90, le=90), lon: float = Query(77.5946, ge=-180, le=180)):
     """
     Direct WeatherNext 3 7-day forecast endpoint.
     """

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 
@@ -10,9 +10,17 @@ from app.models.db_models import ChatMessageLog, DiagnosisLog
 router = APIRouter()
 
 class ChatRequest(BaseModel):
-    session_id: Optional[str] = "default_session"
-    message: str
-    history: Optional[List[Dict[str, str]]] = []
+    session_id: Optional[str] = Field("default_session", max_length=100)
+    message: str = Field(..., max_length=2000)
+    history: Optional[List[Dict[str, str]]] = Field(default_factory=list, max_length=50)
+
+    @field_validator("message")
+    @classmethod
+    def message_not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("message must not be empty")
+        return v
 
 @router.post("/message")
 async def chat_message(req: ChatRequest, db: Session = Depends(get_db)):

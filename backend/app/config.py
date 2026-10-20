@@ -38,6 +38,13 @@ class Settings(BaseSettings):
         MODELS / "disease_classifier.pt",
         BASE_DIR / "checkpoints" / "model_stage1_plantvillage.pt",
     )
+    # PlantDoc fine-tune: used for field photos, where the PlantVillage model is unreliable
+    DISEASE_FIELD_MODEL_PATH: Path = _first_existing(
+        MODELS / "disease_classifier_field.pt",
+        BASE_DIR / "checkpoints" / "model_stage2_plantdoc.pt",
+    )
+    # Routes uploads to the right model: lab_leaf / field_leaf / fruit / other
+    IMAGE_ROUTER_PATH: Path = MODELS / "image_router.pt"
     UNET_SEGMENTATION_PATH: Path = MODELS / "unet_lesion_segmentation.pt"
     # Stage-2 banana ripeness model only (the Fruits-360 stage-1 checkpoint predicts fruit type, not ripeness)
     RIPENESS_MODEL_PATH: Path = MODELS / "ripeness_stage2_banana.pt"

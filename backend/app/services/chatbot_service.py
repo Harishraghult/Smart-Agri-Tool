@@ -84,7 +84,7 @@ class ChatbotService:
         else:
             # Fallback general agricultural expert response
             reply = (
-                f"Thank you for your question regarding **'{user_message}'**.\n\n"
+                f"Thank you for your question regarding **'{user_message[:80]}{'…' if len(user_message) > 80 else ''}'**.\n\n"
                 "As an AI Agricultural Advisory Specialist, here are standard recommendations:\n"
                 "1. **Scout Fields Regularly:** Inspect leaf undersides and stem joints weekly for early pest signs.\n"
                 "2. **Soil Health:** Perform a soil test every 2 years to optimize N-P-K and micronutrient application.\n"

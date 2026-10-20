@@ -132,7 +132,9 @@ export default function DiagnosisModule() {
 
       {error && <div className="glass-panel error-banner">{error}</div>}
 
-      {result?.low_confidence && (
+      {result?.input_warning && <div className="glass-panel warning-banner">{result.input_warning}</div>}
+
+      {result?.low_confidence && !result?.input_warning && (
         <div className="glass-panel warning-banner">
           Not confident: the model's top guess is only {(result.confidence * 100).toFixed(1)}%.
           Other candidates: {result.top_candidates?.slice(1).map((c) => `${c.class.replace(/___/g, ' — ').replace(/_/g, ' ')} (${c.percentage})`).join(', ')}.

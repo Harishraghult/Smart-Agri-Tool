@@ -170,6 +170,7 @@ export default function FieldModule() {
       </div>
 
       {error && <div className="glass-panel error-banner">{error}</div>}
+      {result?.input_warning && <div className="glass-panel warning-banner">{result.input_warning}</div>}
 
       {/* Results */}
       {result && (

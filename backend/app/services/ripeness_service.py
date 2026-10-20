@@ -7,6 +7,8 @@ import torch.nn as nn
 from torchvision import models, transforms
 
 from app.config import settings
+from app.services.image_utils import load_rgb_image
+from app.services.image_router_service import image_router_service, UNCLEAR_IMAGE_WARNING
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 IMG_SIZE = 224
@@ -84,9 +86,17 @@ class RipenessService:
         }
 
     def predict(self, image_bytes: bytes) -> dict:
-        image_pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        image_pil = load_rgb_image(image_bytes)
         image_np = np.array(image_pil)
         img_tensor = EVAL_TRANSFORM(image_pil).unsqueeze(0).to(DEVICE)
+
+        image_type = image_router_service.classify(image_pil)
+        input_warning = None
+        if image_type and image_type["uncertain"]:
+            input_warning = UNCLEAR_IMAGE_WARNING
+        elif image_type and image_type["type"] != "fruit":
+            input_warning = (f"This doesn't look like a fruit photo (it looks like {image_type['description']}). "
+                             "The ripeness grade below is unreliable; upload a photo of the banana.")
 
         # 1. Color space ripeness index calculation
         color_feats = self._compute_color_features(image_np)
@@ -157,7 +167,10 @@ class RipenessService:
                 "brown_ratio_pct": color_feats["brown_ratio"]
             },
             "storage_recommendation": recommendation,
-            "low_confidence": confidence < settings.CONFIDENCE_THRESHOLD,
+            "low_confidence": confidence < settings.CONFIDENCE_THRESHOLD or input_warning is not None,
+            "image_type": image_type,
+            "preprocessing": image_pil.info.get("preprocessing", []),
+            "input_warning": input_warning,
             "inference_engine": "efficientnet_b0" if self.model is not None else "hsv_heuristic"
         }
 

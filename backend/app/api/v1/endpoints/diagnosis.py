@@ -5,6 +5,7 @@ from typing import Optional
 from app.services.diagnosis_service import diagnosis_service
 from app.db.session import get_db
 from app.models.db_models import DiagnosisLog
+from app.services.image_utils import ImageValidationError
 
 router = APIRouter()
 
@@ -18,14 +19,17 @@ async def predict_disease(
     Diagnose plant diseases from an uploaded leaf image.
     Returns species, condition, confidence, cause_category, severity_score %, symptoms, and remedies.
     """
-    if not file.content_type.startswith("image/"):
+    if not (file.content_type or "").startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image (JPEG, PNG, etc.)")
 
     image_bytes = await file.read()
     if len(image_bytes) == 0:
         raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
-    result = diagnosis_service.predict(image_bytes)
+    try:
+        result = diagnosis_service.predict(image_bytes)
+    except ImageValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     # Log diagnosis to DB
     try:

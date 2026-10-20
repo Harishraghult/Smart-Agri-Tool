@@ -17,6 +17,12 @@ DEFAULT_IMPORTANCES = {
     "ph": 0.03
 }
 
+# Min/max of each feature in the Kaggle training CSV; outside this the model is extrapolating
+TRAINING_RANGES = {
+    "N": (0.0, 140.0), "P": (5.0, 145.0), "K": (5.0, 205.0), "temperature": (8.8, 43.7),
+    "humidity": (14.3, 100.0), "ph": (3.5, 9.9), "rainfall": (20.2, 298.6),
+}
+
 CROP_DESCRIPTIONS = {
     "rice": "Requires high rainfall (>200mm), clayey loam soil, and warm temperatures.",
     "maize": "Well-drained soil, moderate rainfall (50-100mm), high nitrogen requirement.",
@@ -117,6 +123,14 @@ class CropRecommenderService:
             ]
             feature_importances = DEFAULT_IMPORTANCES
 
+        values = {"N": n, "P": p, "K": k, "temperature": temp, "humidity": humidity, "ph": ph, "rainfall": rainfall}
+        out_of_range = [
+            {"feature": f, "value": v, "training_min": lo, "training_max": hi}
+            for f, v in values.items()
+            for lo, hi in [TRAINING_RANGES[f]]
+            if not lo <= v <= hi
+        ]
+
         # Build key drivers text
         top_driver = max(feature_importances.items(), key=lambda x: x[1])[0]
 
@@ -126,6 +140,8 @@ class CropRecommenderService:
             "feature_importances": feature_importances,
             "key_driver": top_driver,
             "inference_engine": "xgboost" if self.model is not None else "rule_based",
+            "low_confidence": bool(out_of_range) or top_crops[0]["confidence"] < settings.CONFIDENCE_THRESHOLD,
+            "out_of_range_features": out_of_range,
             "soil_climate_summary": {
                 "N_PK_ratio": f"{n}:{p}:{k}",
                 "temperature": f"{temp}°C",
