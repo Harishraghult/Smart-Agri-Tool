@@ -98,9 +98,8 @@ Accuracy with the crop on Auto-detect, on held-out test photos:
 | Farm model | 37.2% | 78.5% |
 | Farm model + BioCLIP-2 (only listed when BioCLIP-2 is enabled) | 47.8% | **80.3%** |
 
-Farm-photo column: PlantDoc test set; the farm model also scores 71.0% (Auto) on the separate PlantWild
-test set. Each model is strong only on its own kind of photo, which is why Auto is the default. On farm photos
-BioCLIP-2 changed the Farm model's answer on 23 photos (fixed 19, broke 1).
+Farm-photo column: PlantDoc test set; on the separate PlantWild test set the farm model scores 69.3%
+(71.4% with BioCLIP-2). Each model is strong only on its own kind of photo, which is why Auto is the default.
 
 ## 🧹 Input Validation & Image Preprocessing
 
