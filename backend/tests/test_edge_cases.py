@@ -193,3 +193,30 @@ def test_lab_photo_not_overridden_by_species_id():
     assert data["crop_detected"] is None
     assert data["predicted_class"] == "Tomato___Early_blight"
 
+
+
+# --- Disease model selection ---
+
+def test_model_choices_listed():
+    ids = [m["id"] for m in client.get("/api/v1/diagnosis/models").json()["models"]]
+    assert ids == ["auto", "lab", "farm", "farm_bioclip"]
+
+
+def test_unknown_model_choice_rejected():
+    r = client.post("/api/v1/diagnosis/predict", files={"file": ("x", encode(leaf()), "image/jpeg")},
+                    data={"model": "gpt"})
+    assert r.status_code == 422
+
+
+@needs_models
+@pytest.mark.parametrize("choice,engine", [
+    ("lab", "efficientnet_b0_plantvillage"),
+    ("farm", "efficientnet_b0_plantdoc"),
+    ("farm_bioclip", "efficientnet_b0_plantdoc"),
+    ("auto", "efficientnet_b0_plantvillage"),  # lab-style sample photo -> router picks Lab
+])
+def test_model_choice_selects_model(choice, engine):
+    data = client.post("/api/v1/diagnosis/predict", files={"file": ("x", encode(leaf()), "image/jpeg")},
+                       data={"model": choice, "crop_type": "Tomato"}).json()
+    assert data["model_choice"] == choice
+    assert data["inference_engine"]["classifier"] == engine

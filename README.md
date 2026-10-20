@@ -84,6 +84,21 @@ returns a 422 naming the plant. It is not used on lab-style photos (71% crop acc
 the PlantVillage model) or on exposure-corrected photos. ~1.7 GB download on first start;
 `SPECIES_ID_ENABLED=false` turns it off.
 
+## 🧠 Choosing the Disease Model
+
+The Diagnosis tab has a **Model** selector (`model` form field; options from `GET /api/v1/diagnosis/models`).
+Accuracy with the crop on Auto-detect, on held-out test photos:
+
+| Model | Lab-style photos (500) | Farm photos (432) |
+| :--- | :--- | :--- |
+| **Auto** (default): router picks per photo | **99.6%** | **79.4%** |
+| Lab model (PlantVillage) | **99.8%** | 12.3% |
+| Farm model (PlantDoc) | 37.2% | 75.2% |
+| Farm model + BioCLIP-2 crop identification | 47.8% | **79.4%** |
+
+Each model is strong only on its own kind of photo, which is why Auto is the default. On farm photos
+BioCLIP-2 changed the Farm model's answer on 23 photos (fixed 19, broke 1).
+
 ## 🧹 Input Validation & Image Preprocessing
 
 Applied to every image upload (`backend/app/services/image_utils.py`); each response lists the steps in `preprocessing`:

@@ -72,6 +72,19 @@ _CROP_ALIASES = {"corn": "Corn (Maize)", "maize": "Corn (Maize)", "pepper": "Bel
                  "capsicum": "Bell Pepper", "soyabean": "Soybean"}
 
 
+# Which disease model to use. Accuracies are measured on held-out test photos (see README).
+MODEL_CHOICES = {
+    "auto": "Auto: the image router sends lab-style photos to the Lab model and farm photos to Farm + BioCLIP-2",
+    "lab": "Lab model (PlantVillage): single leaf on a plain background",
+    "farm": "Farm model (PlantDoc): real farm photos",
+    "farm_bioclip": "Farm model + BioCLIP-2: BioCLIP-2 identifies the plant species first",
+}
+
+
+class InvalidModelChoiceError(ValueError):
+    """Unknown disease-model choice; message is safe to show."""
+
+
 class UnsupportedCropError(ValueError):
     """The user's crop is not covered by the disease models; message is safe to show."""
 
@@ -188,8 +201,13 @@ class DiagnosisService:
         masked = probs * mask
         return masked / masked.sum().clamp_min(1e-12)
 
-    def predict(self, image_bytes: bytes, crop_type: str = None) -> dict:
+    def predict(self, image_bytes: bytes, crop_type: str = None, model_choice: str = "auto") -> dict:
         import cv2
+        model_choice = (model_choice or "auto").strip().lower()
+        if model_choice not in MODEL_CHOICES:
+            raise InvalidModelChoiceError(f"Unknown model '{model_choice}'. Choose one of: {', '.join(MODEL_CHOICES)}.")
+        if model_choice in ("farm", "farm_bioclip") and self.field_model is None:
+            raise InvalidModelChoiceError("The Farm model is not available on this server.")
         crop_display, crop_prefix = resolve_crop(crop_type)
         image = load_rgb_image(image_bytes)
         img_tensor = EVAL_TRANSFORM(image).unsqueeze(0).to(DEVICE)
@@ -200,7 +218,10 @@ class DiagnosisService:
         #    PlantVillage model is ~12% accurate (yet >90% confident) on them.
         image_type = image_router_service.classify(image)
         input_warning = None
-        use_field_model = self.field_model is not None and image_type is not None and image_type["type"] != "lab_leaf"
+        if model_choice == "auto":
+            use_field_model = self.field_model is not None and image_type is not None and image_type["type"] != "lab_leaf"
+        else:
+            use_field_model = model_choice in ("farm", "farm_bioclip")
         if image_type and image_type["uncertain"]:
             input_warning = UNCLEAR_IMAGE_WARNING
         elif image_type and image_type["type"] in ("fruit", "other"):
@@ -216,7 +237,8 @@ class DiagnosisService:
         # whose altered colours made it misidentify a brightened tomato leaf as strawberry.
         colour_altered = any(step.endswith("_correction") for step in image.info.get("preprocessing", []))
         is_field_photo = image_type is not None and image_type["type"] == "field_leaf"
-        if crop_prefix is None and input_warning is None and is_field_photo and not colour_altered:
+        use_species = model_choice == "farm_bioclip" or (model_choice == "auto" and is_field_photo)
+        if crop_prefix is None and input_warning is None and use_species and not colour_altered:
             crop_detected = species_service.identify(image)
             if crop_detected and crop_detected["confident"]:
                 if not crop_detected["supported"]:
@@ -337,6 +359,7 @@ class DiagnosisService:
             "image_type": image_type,
             "preprocessing": image.info.get("preprocessing", []),
             "crop_selected": crop_display,
+            "model_choice": model_choice,
             "crop_detected": crop_detected,
             "input_warning": input_warning,
             "inference_engine": {

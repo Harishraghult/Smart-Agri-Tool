@@ -11,6 +11,15 @@ export default function DiagnosisModule() {
   // 'auto' = let the model guess the crop; picking it restricts the diagnosis to that crop's diseases
   const [crop, setCrop] = useState('auto');
   const [supportedCrops, setSupportedCrops] = useState([]);
+  // Which disease model to run; 'auto' lets the image router pick per photo
+  const [modelChoice, setModelChoice] = useState('auto');
+
+  const MODEL_LABELS = {
+    auto: 'Auto (recommended): picks Lab or Farm per photo',
+    lab: 'Lab model: single leaf on plain background',
+    farm: 'Farm model: real farm / field photos',
+    farm_bioclip: 'Farm model + BioCLIP-2 crop identification',
+  };
 
   useEffect(() => {
     fetch('/api/v1/diagnosis/crops')
@@ -34,7 +43,7 @@ export default function DiagnosisModule() {
     healthy: { file: 'tomato_healthy.jpg', crop: 'Tomato' },
   };
 
-  const runDiagnosis = async (imageFile, cropChoice = crop) => {
+  const runDiagnosis = async (imageFile, cropChoice = crop, modelSel = modelChoice) => {
     setResult(null);
     setError(null);
     if (cropChoice === 'other') {
@@ -45,6 +54,7 @@ export default function DiagnosisModule() {
     const formData = new FormData();
     formData.append('file', imageFile);
     if (cropChoice !== 'auto') formData.append('crop_type', cropChoice);
+    formData.append('model', modelSel);
     try {
       setResult(await postForm('/api/v1/diagnosis/predict', formData));
     } catch (err) {
@@ -127,6 +137,21 @@ export default function DiagnosisModule() {
                 <option value="other">Other / not listed</option>
               </select>
             </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}>
+              Model:
+              <select
+                value={modelChoice}
+                onChange={(e) => {
+                  const nextModel = e.target.value;
+                  setModelChoice(nextModel);
+                  if (file) runDiagnosis(file, crop, nextModel);
+                }}
+                disabled={loading}
+                style={{ flex: 1, padding: '8px 10px', borderRadius: '10px', background: 'rgba(15,23,42,0.8)', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.15)' }}
+              >
+                {Object.entries(MODEL_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+              </select>
+            </label>
             <label className="dropzone" style={{ display: 'block' }}>
               <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
               <div className="dropzone-icon">
@@ -192,6 +217,10 @@ export default function DiagnosisModule() {
                   {result.crop_type} — {result.condition}
                 </h3>
                 <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '4px' }}>
+                  Model: {MODEL_LABELS[result.model_choice]?.split(':')[0] || result.model_choice}
+                  {' '}(answered by the {result.inference_engine?.classifier?.endsWith('plantdoc') ? 'Farm' : 'Lab'} model)
+                </p>
+                <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '2px' }}>
                   {result.crop_selected
                     ? `Crop: ${result.crop_selected} (selected by you)`
                     : result.crop_detected?.confident

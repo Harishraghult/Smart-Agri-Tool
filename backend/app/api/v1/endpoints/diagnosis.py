@@ -2,7 +2,9 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from sqlalchemy.orm import Session
 from typing import Optional
 
-from app.services.diagnosis_service import diagnosis_service, SUPPORTED_CROPS, UnsupportedCropError
+from app.services.diagnosis_service import (
+    diagnosis_service, SUPPORTED_CROPS, MODEL_CHOICES, UnsupportedCropError, InvalidModelChoiceError,
+)
 from app.db.session import get_db
 from app.models.db_models import DiagnosisLog
 from app.services.image_utils import ImageValidationError
@@ -15,10 +17,17 @@ async def supported_crops():
     return {"crops": list(SUPPORTED_CROPS)}
 
 
+@router.get("/models")
+async def disease_models():
+    """Disease-model choices for the model selector."""
+    return {"models": [{"id": k, "description": v} for k, v in MODEL_CHOICES.items()], "default": "auto"}
+
+
 @router.post("/predict")
 async def predict_disease(
     file: UploadFile = File(...),
     crop_type: Optional[str] = Form(None),
+    model: Optional[str] = Form("auto"),
     db: Session = Depends(get_db)
 ):
     """
@@ -33,8 +42,8 @@ async def predict_disease(
         raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
     try:
-        result = diagnosis_service.predict(image_bytes, crop_type)
-    except UnsupportedCropError as e:
+        result = diagnosis_service.predict(image_bytes, crop_type, model)
+    except (UnsupportedCropError, InvalidModelChoiceError) as e:
         raise HTTPException(status_code=422, detail=str(e))
     except ImageValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
