@@ -91,12 +91,13 @@ Accuracy with the crop on Auto-detect, on held-out test photos:
 
 | Model | Lab-style photos (500) | Farm photos (432) |
 | :--- | :--- | :--- |
-| **Auto** (default): router picks per photo | **99.6%** | **79.4%** |
+| **Auto** (default): router picks per photo | **99.6%** | **80.3%** |
 | Lab model (PlantVillage) | **99.8%** | 12.3% |
-| Farm model (PlantDoc) | 37.2% | 75.2% |
-| Farm model + BioCLIP-2 crop identification | 47.8% | **79.4%** |
+| Farm model | 37.2% | 78.5% |
+| Farm model + BioCLIP-2 crop identification | 47.8% | **80.3%** |
 
-Each model is strong only on its own kind of photo, which is why Auto is the default. On farm photos
+Farm-photo column: PlantDoc test set; the farm model also scores 71.0% (Auto) on the separate PlantWild
+test set. Each model is strong only on its own kind of photo, which is why Auto is the default. On farm photos
 BioCLIP-2 changed the Farm model's answer on 23 photos (fixed 19, broke 1).
 
 ## 🧹 Input Validation & Image Preprocessing
@@ -228,6 +229,7 @@ python training/crop_recommender/train.py                      # -> models/crop_
 python training/field_classifiers/train.py --task pest         # -> models/pest_classifier.pt
 python training/field_classifiers/train.py --task weed         # -> models/weed_classifier.pt
 python scripts/prepare_plantdoc_crops.py                       # leaf crops from PlantDoc boxes (val/test duplicates removed)
+python scripts/prepare_plantwild.py                            # PlantWild -> field classes (CC-BY-NC-ND: non-commercial only)
 python training/disease_classifier/train_field.py              # -> models/disease_classifier_field.pt
 python training/image_router/train.py                          # -> models/image_router.pt
 python training/ripeness_classifier/train.py --skip-stage1 --epochs-stage2 8 --lr-stage2 3e-4
@@ -252,7 +254,7 @@ Measured on held-out test splits through the backend's own inference code (`app/
 | Model Track | Architecture | Dataset | Test Accuracy | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | **Disease Classifier** | EfficientNet-B0 | PlantVillage (38 classes, pHash-deduplicated split) | **98.9%** lab photos (1,500, routed) | ✅ Served |
-| **Disease (field photos)** | EfficientNet-B0, 288 px | PlantDoc photos + 6.7k leaf crops from PlantDoc boxes | **75.2%** auto-detected crop, **85.0%** with crop selected (432) | ✅ Served via router |
+| **Disease (field photos)** | EfficientNet-B0, 288 px, 34 classes | PlantDoc photos + 6.7k PlantDoc leaf crops + 5.2k PlantWild photos | PlantDoc test (432): **80.3%** auto, **85.6%** crop selected · PlantWild test (1,484): **71.0%** auto, **81.5%** crop selected | ✅ Served via router |
 | **Image-type Router** | EfficientNet-B0 | lab leaf / field leaf / fruit / other | **99.7%** (1,600) | ✅ Served |
 | **Ripeness Classifier** | EfficientNet-B0 | Banana Ripeness (4 classes) | **99.1%** (562 test imgs) | ✅ Served |
 | **Pest Classifier** | EfficientNet-B0 | Agricultural Pests (12) + `no_pest` (lab + outdoor leaves + field scenes) | **92.8%** on pests; false alarms on outdoor leaves 1.4% (was 38%) | ✅ Served |
