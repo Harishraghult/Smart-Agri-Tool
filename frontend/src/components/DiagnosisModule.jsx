@@ -194,7 +194,9 @@ export default function DiagnosisModule() {
                 <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '4px' }}>
                   {result.crop_selected
                     ? `Crop: ${result.crop_selected} (selected by you)`
-                    : 'Crop auto-detected. If it is wrong, select your crop above and diagnose again.'}
+                    : result.crop_detected?.confident
+                      ? `Crop identified as ${result.crop_detected.species} (${Math.round(result.crop_detected.confidence * 100)}% sure). If that is wrong, select your crop above.`
+                      : 'Crop auto-detected. If it is wrong, select your crop above.'}
                 </p>
                 {result.pathogen_name && (
                   <p style={{ color: '#10b981', fontStyle: 'italic', fontSize: '0.9rem', marginTop: '2px' }}>

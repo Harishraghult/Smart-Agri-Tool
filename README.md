@@ -77,6 +77,13 @@ crop's diseases, which fixes cross-crop mistakes (a potato leaf read as tomato):
 75.2% → 85.0%. Crops outside the 14 supported ones (`GET /api/v1/diagnosis/crops`) get a 422 explaining
 that a diagnosis would be a guess, instead of a wrong answer.
 
+**Auto-detect** uses [BioCLIP-2](https://huggingface.co/imageomics/bioclip-2) (MIT licence, trained on 200M
+organism photos) to identify the plant species in field photos. When it is ≥90% sure it restricts the
+diagnosis to that crop (farm photos 75.2% → 79.4%) or, for an unsupported plant such as pear or betel,
+returns a 422 naming the plant. It is not used on lab-style photos (71% crop accuracy there, vs ~99% for
+the PlantVillage model) or on exposure-corrected photos. ~1.7 GB download on first start;
+`SPECIES_ID_ENABLED=false` turns it off.
+
 ## 🧹 Input Validation & Image Preprocessing
 
 Applied to every image upload (`backend/app/services/image_utils.py`); each response lists the steps in `preprocessing`:

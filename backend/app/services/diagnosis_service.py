@@ -10,6 +10,7 @@ import numpy as np
 from app.config import settings
 from app.services.image_utils import load_rgb_image
 from app.services.image_router_service import image_router_service, UNCLEAR_IMAGE_WARNING
+from app.services.species_service import species_service
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 IMG_SIZE = 224
@@ -117,6 +118,7 @@ class DiagnosisService:
             "disease_classifier": self.disease_model is not None,
             "disease_field_classifier": self.field_model is not None,
             "image_router": image_router_service.model is not None,
+            "species_identifier": species_service.model is not None,
             "unet_segmentation": self.unet_model is not None,
             "cause_category_lookup": bool(self.cause_lookup),
         }
@@ -204,6 +206,26 @@ class DiagnosisService:
         elif image_type and image_type["type"] in ("fruit", "other"):
             input_warning = (f"This doesn't look like a leaf photo (it looks like {image_type['description']}). "
                              "The diagnosis below is unreliable; upload a close-up of a single leaf.")
+
+        # 0b. Auto-detect: identify the plant species. A confident unsupported plant (pear, betel, ...)
+        #     is reported instead of being forced into a wrong disease class; a confident supported
+        #     crop restricts the diagnosis to it (farm photos 75.2% -> 79.4%).
+        crop_detected = None
+        # Field photos only: on lab-style photos BioCLIP-2 named the crop right just 71% of the time,
+        # while the PlantVillage model gets it ~99% right. Also skipped for exposure-corrected photos,
+        # whose altered colours made it misidentify a brightened tomato leaf as strawberry.
+        colour_altered = any(step.endswith("_correction") for step in image.info.get("preprocessing", []))
+        is_field_photo = image_type is not None and image_type["type"] == "field_leaf"
+        if crop_prefix is None and input_warning is None and is_field_photo and not colour_altered:
+            crop_detected = species_service.identify(image)
+            if crop_detected and crop_detected["confident"]:
+                if not crop_detected["supported"]:
+                    raise UnsupportedCropError(
+                        f"This looks like {crop_detected['species'].lower()} ({crop_detected['scientific_name']}, "
+                        f"{crop_detected['confidence']:.0%} sure), which isn't supported yet, so a diagnosis would "
+                        f"be a guess. Supported crops: {', '.join(SUPPORTED_CROPS)}. If it is actually one of "
+                        "these, select it in the Crop list.")
+                crop_prefix = SUPPORTED_CROPS[crop_detected["species"]]
 
         # 1. Classification, restricted to the user's crop when given (field photos: 64.8% -> 80.8%)
         candidates = []
@@ -315,6 +337,7 @@ class DiagnosisService:
             "image_type": image_type,
             "preprocessing": image.info.get("preprocessing", []),
             "crop_selected": crop_display,
+            "crop_detected": crop_detected,
             "input_warning": input_warning,
             "inference_engine": {
                 "classifier": classifier_engine,

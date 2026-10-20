@@ -15,3 +15,4 @@ matplotlib>=3.7
 requests>=2.30
 python-multipart>=0.0.6
 ultralytics>=8.0
+open_clip_torch>=2.24  # BioCLIP-2 species identification (optional)

@@ -176,3 +176,20 @@ def test_correct_crop_keeps_correct_diagnosis():
     data = client.post("/api/v1/diagnosis/predict", files={"file": ("x", encode(leaf()), "image/jpeg")},
                        data={"crop_type": "Tomato"}).json()
     assert data["predicted_class"] == "Tomato___Early_blight"
+
+
+# --- Species identification (BioCLIP-2) for crop auto-detect ---
+
+from app.services.species_service import species_service  # noqa: E402
+
+needs_species = pytest.mark.skipif(species_service.model is None or diagnosis_service.disease_model is None,
+                                   reason="BioCLIP-2 species identifier not available")
+
+
+@needs_species
+def test_lab_photo_not_overridden_by_species_id():
+    # BioCLIP-2 is only consulted for field photos; lab photos keep the 99%-accurate PlantVillage model
+    data = client.post("/api/v1/diagnosis/predict", files={"file": ("x", encode(leaf()), "image/jpeg")}).json()
+    assert data["crop_detected"] is None
+    assert data["predicted_class"] == "Tomato___Early_blight"
+
