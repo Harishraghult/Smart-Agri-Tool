@@ -113,7 +113,13 @@ export default function DiagnosisModule() {
               Crop:
               <select
                 value={crop}
-                onChange={(e) => setCrop(e.target.value)}
+                onChange={(e) => {
+                  const nextCrop = e.target.value;
+                  setCrop(nextCrop);
+                  // Re-diagnose right away so the result always matches the selected crop
+                  if (file) runDiagnosis(file, nextCrop);
+                }}
+                disabled={loading}
                 style={{ flex: 1, padding: '8px 10px', borderRadius: '10px', background: 'rgba(15,23,42,0.8)', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.15)' }}
               >
                 <option value="auto">Auto-detect (less accurate)</option>
