@@ -1,0 +1,40 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Large Datasets & Zip archives
+data/
+raw/
+processed/
+PlantDoc dataset/
+plantvillage dataset/
+processed_plantdoc/
+*.zip
+*.tar.gz
+*.crdownload
+
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+npm-debug.log*
+
+# Databases & Environments
+*.db
+.env
+.venv/
+venv/
+ENV/
+
+# Model Checkpoints & Large Artifacts
+checkpoints/
+predictions/
+*.pt
+*.onnx
+
+# Word documents / local testing
+*.docx
+leaf.jpg
+leaf12.jpg
+# Superseded crop model trained on the synthetic CSV (kept locally for reference)
+models/crop_recommender_synthetic/

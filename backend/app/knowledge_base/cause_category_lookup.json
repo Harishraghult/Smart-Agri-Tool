@@ -1,0 +1,279 @@
+{
+  "_comment": "Hand-curated cause_category lookup table. Maps each PlantVillage/PlantDoc disease class to its cause category (pathogen/pest/deficiency), pathogen/pest name, common symptoms, and recommended remedies. This is a MANUAL CURATION task -- the datasets do not provide this mapping automatically.",
+
+  "Apple___Apple_scab": {
+    "cause_category": "pathogen",
+    "pathogen_type": "fungus",
+    "pathogen_name": "Venturia inaequalis",
+    "symptoms": ["Olive-green to dark brown lesions on leaves", "Scabby spots on fruit surface", "Leaf curling and premature drop"],
+    "remedies": ["Apply fungicide (captan, mancozeb) at green tip stage", "Remove and destroy fallen infected leaves", "Prune for good air circulation", "Plant resistant varieties (Liberty, Enterprise)"],
+    "severity_notes": "Mild if < 10% leaf area; severe if > 30% with fruit involvement"
+  },
+  "Apple___Black_rot": {
+    "cause_category": "pathogen",
+    "pathogen_type": "fungus",
+    "pathogen_name": "Botryosphaeria obtusa",
+    "symptoms": ["Frogeye leaf spots (tan center, dark border)", "Black, rotting fruit with concentric rings", "Cankers on branches"],
+    "remedies": ["Prune out dead and cankered wood", "Remove mummified fruit from trees", "Apply fungicide (captan) during growing season", "Maintain tree vigor with proper fertilization"],
+    "severity_notes": "Can destroy entire crop if left untreated in warm, humid conditions"
+  },
+  "Apple___Cedar_apple_rust": {
+    "cause_category": "pathogen",
+    "pathogen_type": "fungus",
+    "pathogen_name": "Gymnosporangium juniperi-virginianae",
+    "symptoms": ["Bright orange/yellow spots on upper leaf surface", "Tube-like projections on leaf undersides", "Spots on fruit in severe cases"],
+    "remedies": ["Remove nearby cedar/juniper trees (alternate host)", "Apply fungicide (myclobutanil) at bloom", "Plant resistant apple varieties", "Scout for galls on cedar trees in spring"],
+    "severity_notes": "Rarely kills trees but reduces fruit quality significantly"
+  },
+  "Apple___healthy": {
+    "cause_category": "none",
+    "pathogen_type": "none",
+    "pathogen_name": null,
+    "symptoms": [],
+    "remedies": ["Continue standard orchard management practices"],
+    "severity_notes": "No disease detected"
+  },
+  "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot": {
+    "cause_category": "pathogen",
+    "pathogen_type": "fungus",
+    "pathogen_name": "Cercospora zeae-maydis",
+    "symptoms": ["Rectangular gray to tan lesions between leaf veins", "Lesions run parallel to veins", "Lower leaves affected first"],
+    "remedies": ["Rotate crops (avoid corn-on-corn)", "Till under crop residue", "Apply foliar fungicide (strobilurins) at VT-R1", "Plant resistant hybrids"],
+    "severity_notes": "Yield losses up to 40% in susceptible hybrids under high pressure"
+  },
+  "Corn_(maize)___Common_rust_": {
+    "cause_category": "pathogen",
+    "pathogen_type": "fungus",
+    "pathogen_name": "Puccinia sorghi",
+    "symptoms": ["Small, round to elongated brown/red pustules on both leaf surfaces", "Pustules break open releasing powdery spores", "Severe: premature leaf death"],
+    "remedies": ["Plant resistant hybrids", "Apply fungicide if pustules appear before tasseling", "Scout fields regularly from V8 onwards", "Most commercial hybrids have adequate resistance"],
+    "severity_notes": "Usually minor in resistant varieties; significant in sweet corn"
+  },
+  "Corn_(maize)___Northern_Leaf_Blight": {
+    "cause_category": "pathogen",
+    "pathogen_type": "fungus",
+    "pathogen_name": "Exserohilum turcicum",
+    "symptoms": ["Long, elliptical gray-green to tan lesions (1-6 inches)", "Lesions start on lower leaves", "Can coalesce and kill entire leaves"],
+    "remedies": ["Rotate crops away from corn", "Apply foliar fungicide at early infection", "Plant resistant hybrids with Ht genes", "Reduce corn residue through tillage"],
+    "severity_notes": "Up to 30% yield loss if infection occurs before or during silking"
+  },
+  "Corn_(maize)___healthy": {
+    "cause_category": "none",
+    "pathogen_type": "none",
+    "pathogen_name": null,
+    "symptoms": [],
+    "remedies": ["Continue standard corn management"],
+    "severity_notes": "No disease detected"
+  },
+  "Grape___Black_rot": {
+    "cause_category": "pathogen",
+    "pathogen_type": "fungus",
+    "pathogen_name": "Guignardia bidwellii",
+    "symptoms": ["Tan spots with dark borders on leaves", "Brown-black fruit rot; berries shrivel to hard mummies", "Lesions on shoots and tendrils"],
+    "remedies": ["Remove mummified berries and infected canes", "Apply fungicide (mancozeb, myclobutanil) from bud break", "Ensure good canopy management for air circulation", "Sanitation is critical — remove all diseased tissue"],
+    "severity_notes": "Can destroy 80%+ of crop; most damaging grape disease in humid regions"
+  },
+  "Grape___Esca_(Black_Measles)": {
+    "cause_category": "pathogen",
+    "pathogen_type": "fungus",
+    "pathogen_name": "Phaeomoniella/Phaeoacremonium complex",
+    "symptoms": ["Tiger-stripe pattern on leaves (interveinal chlorosis/necrosis)", "Dark spots on berries", "Sudden vine collapse (apoplexy) in severe cases"],
+    "remedies": ["No curative treatment available", "Remove severely affected vines", "Protect pruning wounds with fungicide paste", "Avoid large pruning wounds; use double-pruning technique"],
+    "severity_notes": "Chronic trunk disease; vines may survive years with declining yield"
+  },
+  "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)": {
+    "cause_category": "pathogen",
+    "pathogen_type": "fungus",
+    "pathogen_name": "Pseudocercospora vitis",
+    "symptoms": ["Dark brown to reddish-brown spots on leaves", "Spots may have yellow halo", "Premature defoliation in severe cases"],
+    "remedies": ["Apply fungicide (copper-based) preventatively", "Remove fallen diseased leaves", "Ensure adequate spacing for air circulation", "Avoid overhead irrigation"],
+    "severity_notes": "Usually moderate; mainly affects leaf quality, not directly fruit"
+  },
+  "Grape___healthy": {
+    "cause_category": "none",
+    "pathogen_type": "none",
+    "pathogen_name": null,
+    "symptoms": [],
+    "remedies": ["Continue standard vineyard management"],
+    "severity_notes": "No disease detected"
+  },
+  "Potato___Early_blight": {
+    "cause_category": "pathogen",
+    "pathogen_type": "fungus",
+    "pathogen_name": "Alternaria solani",
+    "symptoms": ["Dark brown spots with concentric rings (target pattern) on older leaves", "Yellowing around lesions", "Premature defoliation starting from lower leaves"],
+    "remedies": ["Rotate crops (3-year minimum away from solanaceous crops)", "Apply fungicide (chlorothalonil, mancozeb) preventatively", "Destroy crop debris after harvest", "Ensure adequate soil fertility (stressed plants are more susceptible)"],
+    "severity_notes": "Yield reduction 20-30% typical; worse under hot, dry conditions with heavy dew"
+  },
+  "Potato___Late_blight": {
+    "cause_category": "pathogen",
+    "pathogen_type": "oomycete",
+    "pathogen_name": "Phytophthora infestans",
+    "symptoms": ["Water-soaked lesions on leaves, rapidly expanding", "White fuzzy sporulation on leaf undersides in humid conditions", "Brown/black stem lesions", "Tuber rot"],
+    "remedies": ["Apply fungicide (metalaxyl, chlorothalonil) preventatively", "Destroy volunteer potatoes and cull piles", "Plant certified disease-free seed tubers", "Monitor weather forecasts (>10 hours leaf wetness + cool temps = high risk)"],
+    "severity_notes": "CRITICAL — can destroy entire crop in days under favorable conditions (the Irish Potato Famine pathogen)"
+  },
+  "Potato___healthy": {
+    "cause_category": "none",
+    "pathogen_type": "none",
+    "pathogen_name": null,
+    "symptoms": [],
+    "remedies": ["Continue standard potato management"],
+    "severity_notes": "No disease detected"
+  },
+  "Tomato___Bacterial_spot": {
+    "cause_category": "pathogen",
+    "pathogen_type": "bacterium",
+    "pathogen_name": "Xanthomonas vesicatoria",
+    "symptoms": ["Small, water-soaked spots on leaves that turn brown/black", "Raised, scabby spots on fruit", "Severe defoliation exposing fruit to sunscald"],
+    "remedies": ["Use certified disease-free seed/transplants", "Apply copper-based bactericide preventatively", "Avoid overhead irrigation", "Rotate crops (2+ years away from solanaceous crops)"],
+    "severity_notes": "Fruit quality severely affected; yield losses 10-50%"
+  },
+  "Tomato___Early_blight": {
+    "cause_category": "pathogen",
+    "pathogen_type": "fungus",
+    "pathogen_name": "Alternaria solani",
+    "symptoms": ["Target-shaped spots (concentric rings) on older/lower leaves", "Stem lesions near soil line", "Fruit rot at stem end"],
+    "remedies": ["Mulch around plants to prevent soil splash", "Apply fungicide (chlorothalonil) starting at first fruit set", "Stake/cage plants for air circulation", "Rotate crops 3+ years"],
+    "severity_notes": "Common and manageable; yield impact 20-40% if uncontrolled"
+  },
+  "Tomato___Late_blight": {
+    "cause_category": "pathogen",
+    "pathogen_type": "oomycete",
+    "pathogen_name": "Phytophthora infestans",
+    "symptoms": ["Large, water-soaked, dark lesions on leaves", "White mold on leaf undersides", "Firm brown rot on fruit", "Rapid plant death"],
+    "remedies": ["Destroy infected plants immediately (do not compost)", "Apply fungicide (chlorothalonil, copper) preventatively", "Avoid planting near potatoes", "Monitor regional late blight alerts"],
+    "severity_notes": "CRITICAL — same pathogen as potato late blight; can destroy crop in days"
+  },
+  "Tomato___Leaf_Mold": {
+    "cause_category": "pathogen",
+    "pathogen_type": "fungus",
+    "pathogen_name": "Passalora fulva (syn. Cladosporium fulvum)",
+    "symptoms": ["Yellow spots on upper leaf surface", "Olive-green to brown velvety mold on leaf undersides", "Leaves may curl and drop"],
+    "remedies": ["Improve greenhouse ventilation", "Reduce humidity below 85%", "Apply fungicide if needed", "Plant resistant varieties (many modern varieties carry Cf genes)"],
+    "severity_notes": "Mainly a greenhouse problem; field impact usually moderate"
+  },
+  "Tomato___Septoria_leaf_spot": {
+    "cause_category": "pathogen",
+    "pathogen_type": "fungus",
+    "pathogen_name": "Septoria lycopersici",
+    "symptoms": ["Many small circular spots with dark borders and gray centers", "Tiny black dots (pycnidia) visible in spot centers", "Progressive defoliation from bottom up"],
+    "remedies": ["Remove and destroy lower infected leaves", "Apply fungicide (chlorothalonil, mancozeb)", "Avoid overhead watering", "Mulch to prevent soil splash"],
+    "severity_notes": "Very common; significant defoliation reduces fruit size and yield"
+  },
+  "Tomato___Spider_mites Two-spotted_spider_mite": {
+    "cause_category": "pest",
+    "pathogen_type": "arachnid",
+    "pathogen_name": "Tetranychus urticae",
+    "symptoms": ["Fine stippling/bronzing on leaves", "Fine webbing on leaf undersides", "Leaves turn yellow and dry out"],
+    "remedies": ["Introduce predatory mites (Phytoseiulus persimilis)", "Apply miticide (abamectin) if population exceeds threshold", "Increase humidity (mites prefer dry conditions)", "Avoid broad-spectrum insecticides that kill natural predators"],
+    "severity_notes": "Can cause rapid plant decline in hot, dry conditions; economic threshold ~5 mites/leaf"
+  },
+  "Tomato___Target_Spot": {
+    "cause_category": "pathogen",
+    "pathogen_type": "fungus",
+    "pathogen_name": "Corynespora cassiicola",
+    "symptoms": ["Circular brown spots with concentric rings on leaves", "Spots may coalesce into large necrotic areas", "Can also affect stems and fruit"],
+    "remedies": ["Apply fungicide (chlorothalonil, azoxystrobin) preventatively", "Remove crop debris after harvest", "Ensure good air circulation", "Rotate crops away from solanaceous hosts"],
+    "severity_notes": "Moderate to severe; worse in warm, humid conditions"
+  },
+  "Tomato___Tomato_Yellow_Leaf_Curl_Virus": {
+    "cause_category": "pathogen",
+    "pathogen_type": "virus",
+    "pathogen_name": "TYLCV (begomovirus, transmitted by whitefly Bemisia tabaci)",
+    "symptoms": ["Severe upward leaf curling", "Yellowing of leaf margins", "Stunted growth", "Reduced/absent fruit production"],
+    "remedies": ["Control whitefly vector (neonicotinoid insecticides, reflective mulch, sticky traps)", "Remove and destroy infected plants", "Use TYLCV-resistant varieties (Ty-1/Ty-3 genes)", "Use insect-proof mesh/netting in seedling nurseries"],
+    "severity_notes": "SEVERE — no cure once infected; prevention through vector control is essential"
+  },
+  "Tomato___Tomato_mosaic_virus": {
+    "cause_category": "pathogen",
+    "pathogen_type": "virus",
+    "pathogen_name": "ToMV (tobamovirus)",
+    "symptoms": ["Mosaic pattern of light and dark green on leaves", "Leaf distortion and fern-leaf symptoms", "Reduced fruit quality and yield"],
+    "remedies": ["Use resistant varieties (Tm-2 gene)", "Disinfect tools and hands (virus is extremely stable)", "Remove and destroy infected plants", "Do not smoke near plants (tobacco can carry ToMV)"],
+    "severity_notes": "Persistent; virus survives in soil and on surfaces for months/years"
+  },
+  "Tomato___healthy": {
+    "cause_category": "none",
+    "pathogen_type": "none",
+    "pathogen_name": null,
+    "symptoms": [],
+    "remedies": ["Continue standard tomato management"],
+    "severity_notes": "No disease detected"
+  },
+  "Pepper,_bell___Bacterial_spot": {
+    "cause_category": "pathogen",
+    "pathogen_type": "bacterium",
+    "pathogen_name": "Xanthomonas euvesicatoria",
+    "symptoms": ["Small, water-soaked spots on leaves", "Raised, scabby lesions on fruit", "Defoliation under warm, wet conditions"],
+    "remedies": ["Use disease-free seed and transplants", "Apply copper + mancozeb spray", "Avoid working in fields when foliage is wet", "Rotate crops 2+ years"],
+    "severity_notes": "Can cause significant quality and yield loss in bell peppers"
+  },
+  "Pepper,_bell___healthy": {
+    "cause_category": "none",
+    "pathogen_type": "none",
+    "pathogen_name": null,
+    "symptoms": [],
+    "remedies": ["Continue standard pepper management"],
+    "severity_notes": "No disease detected"
+  },
+  "Strawberry___Leaf_scorch": {
+    "cause_category": "pathogen",
+    "pathogen_type": "fungus",
+    "pathogen_name": "Diplocarpon earlianum",
+    "symptoms": ["Irregular purple to brown spots on leaves", "Spots may merge causing large necrotic areas", "Leaf margins appear scorched"],
+    "remedies": ["Remove old infected leaves in spring", "Apply fungicide (captan) at first sign", "Ensure good air circulation between plants", "Renovate beds after harvest"],
+    "severity_notes": "Reduces plant vigor and next year's yield; usually not fatal"
+  },
+  "Strawberry___healthy": {
+    "cause_category": "none",
+    "pathogen_type": "none",
+    "pathogen_name": null,
+    "symptoms": [],
+    "remedies": ["Continue standard strawberry management"],
+    "severity_notes": "No disease detected"
+  },
+  "Peach___Bacterial_spot": {
+    "cause_category": "pathogen",
+    "pathogen_type": "bacterium",
+    "pathogen_name": "Xanthomonas arboricola pv. pruni",
+    "symptoms": ["Angular purple-brown spots on leaves", "Spots may shot-hole", "Sunken lesions on fruit with cracking"],
+    "remedies": ["Plant resistant varieties", "Apply copper sprays at leaf fall and early spring", "Avoid overhead irrigation", "Maintain tree vigor"],
+    "severity_notes": "Significant fruit quality issue; worse in warm, humid climates"
+  },
+  "Peach___healthy": {
+    "cause_category": "none",
+    "pathogen_type": "none",
+    "pathogen_name": null,
+    "symptoms": [],
+    "remedies": ["Continue standard peach management"],
+    "severity_notes": "No disease detected"
+  },
+  "Cherry_(including_sour)___Powdery_mildew": {
+    "cause_category": "pathogen",
+    "pathogen_type": "fungus",
+    "pathogen_name": "Podosphaera clandestina",
+    "symptoms": ["White powdery coating on leaves and shoots", "Leaf curling and distortion", "Stunted new growth"],
+    "remedies": ["Apply sulfur or potassium bicarbonate at first sign", "Improve air circulation through pruning", "Apply fungicide (myclobutanil) preventatively", "Water at base, not overhead"],
+    "severity_notes": "Primarily cosmetic on leaves; fruit quality affected if severe"
+  },
+  "Cherry_(including_sour)___healthy": {
+    "cause_category": "none",
+    "pathogen_type": "none",
+    "pathogen_name": null,
+    "symptoms": [],
+    "remedies": ["Continue standard cherry management"],
+    "severity_notes": "No disease detected"
+  },
+
+  "_metadata": {
+    "version": "1.0",
+    "created_by": "Manual curation from plant pathology references",
+    "note": "This is a design decision, not automated data — document it in your report. The cause_category field (pathogen/pest/deficiency/none) is central to the diagnosis pipeline's output structure.",
+    "sources": [
+      "APS (American Phytopathological Society) disease compendia",
+      "University extension service fact sheets",
+      "PlantVillage class label taxonomy"
+    ]
+  }
+}

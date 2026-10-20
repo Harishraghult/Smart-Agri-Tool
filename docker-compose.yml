@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      # Trained artifacts, resolved via PROJECT_ROOT (see backend/app/config.py)
+      - ./models:/project/models:ro
+      - ./checkpoints:/project/checkpoints:ro
+      - ./training:/project/training:ro
+      - ./data:/data
+    environment:
+      - PROJECT_ROOT=/project
+      - DATABASE_URL=sqlite:////app/agri_system.db
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - API_PROXY_TARGET=http://backend:8000
+    restart: always

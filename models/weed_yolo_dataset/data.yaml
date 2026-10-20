@@ -1,0 +1,10 @@
+names:
+  0: Parthenium
+  1: Lantana
+  2: Chine_Apple
+  3: Snake_Weed
+nc: 4
+path: C:\Users\Harish Raghul T\Desktop\Smart Agri-tool\models\weed_yolo_dataset
+test: images/test
+train: images/train
+val: images/val

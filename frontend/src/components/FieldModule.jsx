@@ -1,0 +1,268 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { postForm, loadSampleFile, errorMessage } from '../api';
+import { UploadCloud, Bug, Sprout, Droplets, ShieldAlert, CheckCircle, Sparkles } from 'lucide-react';
+
+export default function FieldModule() {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const canvasRef = useRef(null);
+
+  const handleFileChange = (e) => {
+    const selected = e.target.files[0];
+    if (selected) {
+      setFile(selected);
+      setPreview(URL.createObjectURL(selected));
+      setResult(null);
+    }
+  };
+
+  const SAMPLES = {
+    pests: 'field_pest_grasshopper.jpg',
+    weeds: 'field_weed_lantana.jpg',
+    clean: 'field_clean_rangeland.jpg',
+  };
+
+  const runAnalysis = async (imageFile) => {
+    setLoading(true);
+    setResult(null);
+    setError(null);
+    const formData = new FormData();
+    formData.append('file', imageFile);
+    try {
+      setResult(await postForm('/api/v1/field/analyze', formData));
+    } catch (err) {
+      console.error(err);
+      setError(errorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSampleClick = async (type) => {
+    try {
+      const sampleFile = await loadSampleFile(SAMPLES[type]);
+      setFile(sampleFile);
+      setPreview(URL.createObjectURL(sampleFile));
+      await runAnalysis(sampleFile);
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  };
+
+  const handleAnalyze = async () => {
+    if (!file) return;
+    await runAnalysis(file);
+  };
+
+  // Draw bounding boxes on canvas overlay
+  useEffect(() => {
+    if (result && preview && canvasRef.current) {
+      const cvs = canvasRef.current;
+      const ctx = cvs.getContext('2d');
+      const img = new Image();
+      img.onload = () => {
+        cvs.width = img.width;
+        cvs.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        // Draw Pest Bounding Boxes (Amber)
+        if (result.pest_summary?.pest_detected_list) {
+          result.pest_summary.pest_detected_list.forEach((pest) => {
+            const [x1, y1, x2, y2] = pest.bbox;
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(x1, y1 - 22, ctx.measureText(pest.class).width + 50, 22);
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillText(`${pest.class} (${(pest.confidence * 100).toFixed(0)}%)`, x1 + 4, y1 - 6);
+          });
+        }
+
+        // Draw Weed Bounding Boxes (Lime Green)
+        if (result.weed_summary?.weed_detected_list) {
+          result.weed_summary.weed_detected_list.forEach((weed) => {
+            const [x1, y1, x2, y2] = weed.bbox;
+            ctx.strokeStyle = '#84cc16';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+            ctx.fillStyle = '#84cc16';
+            ctx.fillRect(x1, y1 - 22, ctx.measureText(weed.class).width + 50, 22);
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillText(`${weed.class} (${(weed.confidence * 100).toFixed(0)}%)`, x1 + 4, y1 - 6);
+          });
+        }
+      };
+      img.src = preview;
+    }
+  }, [result, preview]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div className="glass-panel" style={{ padding: '24px' }}>
+        <h3 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>Field Intelligence & Scouting</h3>
+        <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '24px' }}>
+          Identifies pest species (EfficientNet-B0, 12 Agricultural-Pests classes), weed species (EfficientNet-B0, DeepWeeds), and estimates crop water-stress from leaf colour.
+        </p>
+
+        {/* Sample Selection Quick Buttons */}
+        <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Sparkles size={16} color="#06b6d4" /> Try Field Sample:
+          </span>
+          <button className="btn-secondary" style={{ fontSize: '0.825rem', padding: '6px 14px' }} onClick={() => handleSampleClick('pests')}>
+            🐛 Pest (Grasshopper)
+          </button>
+          <button className="btn-secondary" style={{ fontSize: '0.825rem', padding: '6px 14px' }} onClick={() => handleSampleClick('weeds')}>
+            🌿 Weed (Lantana)
+          </button>
+          <button className="btn-secondary" style={{ fontSize: '0.825rem', padding: '6px 14px' }} onClick={() => handleSampleClick('clean')}>
+            🌾 Weed-free Rangeland
+          </button>
+        </div>
+
+        <div className="grid-2">
+          {/* Upload */}
+          <div>
+            <label className="dropzone" style={{ display: 'block' }}>
+              <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+              <div className="dropzone-icon" style={{ background: 'rgba(6,182,212,0.15)', color: '#06b6d4' }}>
+                <Bug size={32} />
+              </div>
+              <p style={{ fontWeight: 600, fontSize: '1rem', color: '#f8fafc' }}>
+                {file ? file.name : 'Select or drop field photo'}
+              </p>
+              <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '6px' }}>
+                Supports JPG, PNG (Max 15MB)
+              </p>
+            </label>
+
+            {preview && (
+              <div style={{ marginTop: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <button className="btn-primary" style={{ background: 'linear-gradient(135deg, #06b6d4, #0891b2)' }} onClick={handleAnalyze} disabled={loading}>
+                  {loading ? 'Scanning...' : 'Scan Field'}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Canvas Detection Bounding Box Preview */}
+          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            {preview ? (
+              <div style={{ position: 'relative', width: '100%', maxHeight: '280px', overflow: 'hidden', borderRadius: '12px', textAlign: 'center' }}>
+                <canvas ref={canvasRef} style={{ maxWidth: '100%', maxHeight: '280px', objectFit: 'contain', borderRadius: '12px' }} />
+              </div>
+            ) : (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                <Bug size={40} style={{ opacity: 0.4, marginBottom: '8px' }} />
+                <p style={{ fontSize: '0.85rem' }}>Upload or click a sample to run the field models</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {error && <div className="glass-panel error-banner">{error}</div>}
+
+      {/* Results */}
+      {result && (
+        <div className="grid-3">
+          {/* Pest Detector Card */}
+          <div className="glass-panel" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h4 style={{ fontSize: '1rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Bug size={18} color="#f59e0b" /> Pest Infestation
+              </h4>
+              <span className="badge badge-pest">{result.pest_summary.risk_level} Risk</span>
+            </div>
+
+            <p style={{ fontSize: '2rem', fontWeight: 700, color: '#f59e0b' }}>
+              {result.pest_summary.pest_count} <span style={{ fontSize: '0.9rem', color: '#94a3b8' }}>{result.inference_engine?.pest === 'heuristic' ? 'pests detected' : 'pest species found'}</span>
+            </p>
+
+            <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {result.pest_summary.pest_detected_list.map((item, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: '8px' }}>
+                  <span style={{ color: '#e2e8f0' }}>{item.class}</span>
+                  <span style={{ color: '#10b981', fontWeight: 600 }}>{(item.confidence * 100).toFixed(0)}% conf</span>
+                </div>
+              ))}
+            </div>
+            {result.pest_summary.identification && result.pest_summary.identification.low_confidence && (
+              <p style={{ marginTop: '12px', fontSize: '0.8rem', color: '#fde68a' }}>
+                Not confident (top guess {result.pest_summary.identification.label} at {(result.pest_summary.identification.confidence * 100).toFixed(0)}%).
+              </p>
+            )}
+            {result.pest_summary.identification && !result.pest_summary.identification.low_confidence && result.pest_summary.identification.label === 'no_pest' && (
+              <p style={{ marginTop: '12px', fontSize: '0.8rem', color: '#10b981' }}>
+                Model found no target species ({(result.pest_summary.identification.confidence * 100).toFixed(0)}% confident).
+              </p>
+            )}
+          </div>
+
+          {/* Weed Detector Card */}
+          <div className="glass-panel" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h4 style={{ fontSize: '1rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Sprout size={18} color="#84cc16" /> Weed Presence
+              </h4>
+              <span className="badge badge-healthy">{result.weed_summary.density_category}</span>
+            </div>
+
+            <p style={{ fontSize: '2rem', fontWeight: 700, color: '#84cc16' }}>
+              {result.weed_summary.weed_count} <span style={{ fontSize: '0.9rem', color: '#94a3b8' }}>{result.inference_engine?.weed === 'heuristic' ? 'weed clusters' : 'weed species found'}</span>
+            </p>
+
+            <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {result.weed_summary.weed_detected_list.map((item, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: '8px' }}>
+                  <span style={{ color: '#e2e8f0' }}>{item.class}</span>
+                  <span style={{ color: '#10b981', fontWeight: 600 }}>{(item.confidence * 100).toFixed(0)}% conf</span>
+                </div>
+              ))}
+            </div>
+            {result.weed_summary.identification && result.weed_summary.identification.low_confidence && (
+              <p style={{ marginTop: '12px', fontSize: '0.8rem', color: '#fde68a' }}>
+                Not confident (top guess {result.weed_summary.identification.label} at {(result.weed_summary.identification.confidence * 100).toFixed(0)}%).
+              </p>
+            )}
+            {result.weed_summary.identification && !result.weed_summary.identification.low_confidence && result.weed_summary.identification.label === 'Negative' && (
+              <p style={{ marginTop: '12px', fontSize: '0.8rem', color: '#10b981' }}>
+                Model found no target species ({(result.weed_summary.identification.confidence * 100).toFixed(0)}% confident).
+              </p>
+            )}
+          </div>
+
+          {/* Water Stress Wilting Card */}
+          <div className="glass-panel" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h4 style={{ fontSize: '1rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Droplets size={18} color="#3b82f6" /> Crop Water Stress
+              </h4>
+            </div>
+
+            <p style={{ fontSize: '1.25rem', fontWeight: 700, color: result.water_stress.is_wilted ? '#f43f5e' : '#10b981', marginBottom: '8px' }}>
+              {result.water_stress.status}
+            </p>
+
+            <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '16px' }}>
+              {result.inference_engine?.wilting === 'cnn' ? 'CNN' : 'Leaf-colour index'} confidence: {(result.water_stress.confidence * 100).toFixed(1)}%
+            </p>
+
+            <div style={{ padding: '12px', background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.15)', borderRadius: '10px' }}>
+              <p style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 600 }}>Overall Field Health Score</p>
+              <p style={{ fontSize: '1.75rem', fontWeight: 700, color: '#ffffff' }}>{result.field_health_score} / 100</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

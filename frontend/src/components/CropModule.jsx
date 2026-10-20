@@ -1,0 +1,198 @@
+import React, { useState } from 'react';
+import { errorMessage } from '../api';
+import { Sprout, BarChart3, CheckCircle2, Sliders, Sparkles } from 'lucide-react';
+
+const SOIL_PRESETS = [
+  { name: '🌾 Paddy / Wetland Soil', N: 90, P: 42, K: 43, temperature: 24.5, humidity: 82, ph: 6.5, rainfall: 210 },
+  { name: '🌽 Balanced Loam Soil', N: 75, P: 50, K: 20, temperature: 22.0, humidity: 65, ph: 6.8, rainfall: 85 },
+  { name: '🌵 Arid / Low Rain Soil', N: 30, P: 45, K: 75, temperature: 28.0, humidity: 18, ph: 7.2, rainfall: 45 },
+  { name: '🍎 Temperate Orchard Soil', N: 35, P: 130, K: 200, temperature: 22.0, humidity: 92, ph: 6.0, rainfall: 115 },
+];
+
+export default function CropModule() {
+  const [formData, setFormData] = useState(SOIL_PRESETS[0]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [result, setResult] = useState(null);
+
+  const handleChange = (name, value) => {
+    setFormData({ ...formData, [name]: parseFloat(value) || 0 });
+  };
+
+  const handleRecommend = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/v1/crop/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      if (!response.ok) throw new Error(`Backend error: ${response.status} ${response.statusText}`);
+      const data = await response.json();
+      setResult(data);
+    } catch (err) {
+      console.error(err);
+      setError(errorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {error && <div className="glass-panel error-banner">{error}</div>}
+      <div className="glass-panel" style={{ padding: '24px' }}>
+        <h3 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>Tabular Crop Recommendation & Explainable ML</h3>
+        <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '20px' }}>
+          XGBoost machine learning model trained on soil nutrient profiles (N, P, K) and agro-climatic conditions.
+        </p>
+
+        {/* Soil Presets */}
+        <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Sparkles size={16} /> Quick Soil Preset:
+          </span>
+          {SOIL_PRESETS.map((preset) => (
+            <button
+              key={preset.name}
+              className={`btn-secondary ${formData.name === preset.name ? 'btn-primary' : ''}`}
+              style={{ fontSize: '0.825rem', padding: '6px 14px' }}
+              onClick={() => setFormData(preset)}
+            >
+              {preset.name}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid-2">
+          {/* Sliders & Numerical Inputs */}
+          <div>
+            <h4 style={{ fontSize: '1rem', color: '#cbd5e1', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Sliders size={18} color="#10b981" /> Soil & Climate Metric Sliders
+            </h4>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', color: '#94a3b8' }}>
+                  <span>Nitrogen (N): <strong>{formData.N} mg/kg</strong></span>
+                </div>
+                <input type="range" min="0" max="140" value={formData.N} onChange={(e) => handleChange('N', e.target.value)} style={{ width: '100%', accentColor: '#10b981' }} />
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', color: '#94a3b8' }}>
+                  <span>Phosphorus (P): <strong>{formData.P} mg/kg</strong></span>
+                </div>
+                <input type="range" min="0" max="145" value={formData.P} onChange={(e) => handleChange('P', e.target.value)} style={{ width: '100%', accentColor: '#06b6d4' }} />
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', color: '#94a3b8' }}>
+                  <span>Potassium (K): <strong>{formData.K} mg/kg</strong></span>
+                </div>
+                <input type="range" min="0" max="205" value={formData.K} onChange={(e) => handleChange('K', e.target.value)} style={{ width: '100%', accentColor: '#f59e0b' }} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', color: '#94a3b8' }}>
+                    <span>Temp: <strong>{formData.temperature}°C</strong></span>
+                  </div>
+                  <input type="range" min="8" max="45" value={formData.temperature} onChange={(e) => handleChange('temperature', e.target.value)} style={{ width: '100%', accentColor: '#3b82f6' }} />
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', color: '#94a3b8' }}>
+                    <span>Humidity: <strong>{formData.humidity}%</strong></span>
+                  </div>
+                  <input type="range" min="10" max="100" value={formData.humidity} onChange={(e) => handleChange('humidity', e.target.value)} style={{ width: '100%', accentColor: '#84cc16' }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', color: '#94a3b8' }}>
+                    <span>pH: <strong>{formData.ph}</strong></span>
+                  </div>
+                  <input type="range" min="3.5" max="10" step="0.1" value={formData.ph} onChange={(e) => handleChange('ph', e.target.value)} style={{ width: '100%', accentColor: '#a855f7' }} />
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', color: '#94a3b8' }}>
+                    <span>Rainfall: <strong>{formData.rainfall} mm</strong></span>
+                  </div>
+                  <input type="range" min="20" max="300" value={formData.rainfall} onChange={(e) => handleChange('rainfall', e.target.value)} style={{ width: '100%', accentColor: '#06b6d4' }} />
+                </div>
+              </div>
+            </div>
+
+            <button className="btn-primary" style={{ marginTop: '20px', width: '100%', justifyContent: 'center' }} onClick={handleRecommend} disabled={loading}>
+              {loading ? 'Evaluating XGBoost Model...' : 'Predict Optimal Crops'}
+            </button>
+          </div>
+
+          {/* Model info card */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <h4 style={{ color: '#10b981', fontSize: '1rem', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sprout size={20} /> Why XGBoost Tabular ML?
+            </h4>
+            <p style={{ color: '#94a3b8', fontSize: '0.875rem', lineHeight: '1.6' }}>
+              XGBoost handles multi-variable nutrient interaction non-linearities (e.g. Nitrogen-Potassium ratios under varying rainfall regimes) with state-of-the-art precision, outperforming standard Random Forests while maintaining built-in feature importance explainability.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Results */}
+      {result && (
+        <div className="grid-2">
+          {/* Top Recommendations */}
+          <div className="glass-panel" style={{ padding: '24px' }}>
+            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 600 }}>Top Recommended Crop</span>
+            <h3 style={{ fontSize: '2rem', color: '#10b981', marginTop: '4px', marginBottom: '16px' }}>
+              {result.recommended_crop}
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {result.top_3_recommendations.map((rec, i) => (
+                <div key={i} style={{ background: i === 0 ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.03)', border: i === 0 ? '1px solid var(--border-accent)' : '1px solid rgba(255,255,255,0.05)', padding: '14px', borderRadius: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700, fontSize: '1rem', color: '#ffffff' }}>#{i+1} {rec.crop}</span>
+                    <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.85rem' }}>{(rec.confidence * 100).toFixed(1)}% match</span>
+                  </div>
+                  <p style={{ color: '#94a3b8', fontSize: '0.825rem', marginTop: '6px', lineHeight: '1.4' }}>{rec.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Feature Importance Explanations */}
+          <div className="glass-panel" style={{ padding: '24px' }}>
+            <h4 style={{ fontSize: '1rem', color: '#cbd5e1', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <BarChart3 size={18} color="#06b6d4" /> Model Feature Importance Breakdown
+            </h4>
+
+            <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '16px' }}>
+              Key driver for this prediction: <strong style={{ color: '#10b981', textTransform: 'capitalize' }}>{result.key_driver}</strong>
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {Object.entries(result.feature_importances).map(([feat, val]) => (
+                <div key={feat}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>
+                    <span style={{ textTransform: 'capitalize' }}>{feat}</span>
+                    <span style={{ color: '#06b6d4', fontWeight: 600 }}>{(val * 100).toFixed(1)}%</span>
+                  </div>
+                  <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px' }}>
+                    <div style={{ height: '100%', width: `${val * 100 * 2.5}%`, background: 'linear-gradient(90deg, #06b6d4, #10b981)', borderRadius: '3px' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

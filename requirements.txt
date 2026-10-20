@@ -1,0 +1,10 @@
+kaggle
+Pillow
+imagehash
+tqdm
+torch
+torchvision
+matplotlib
+seaborn
+opencv-python
+ 
