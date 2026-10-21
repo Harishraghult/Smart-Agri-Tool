@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import Sidebar from './components/Sidebar';
+import React, { useEffect, useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
+import HomePage, { Brand } from './components/HomePage';
 import TopHeader from './components/TopHeader';
-import OverviewModule from './components/OverviewModule';
+import PlantBackdrop from './components/PlantBackdrop';
 import DiagnosisModule from './components/DiagnosisModule';
 import RipenessModule from './components/RipenessModule';
 import FieldModule from './components/FieldModule';
@@ -9,28 +10,59 @@ import AdvisoryModule from './components/AdvisoryModule';
 import CropModule from './components/CropModule';
 import ChatbotModal from './components/ChatbotModal';
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState('overview');
+const MODULES = {
+  diagnosis: DiagnosisModule,
+  ripeness: RipenessModule,
+  field: FieldModule,
+  advisory: AdvisoryModule,
+  crop: CropModule,
+  chat: ChatbotModal,
+};
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'overview': return <OverviewModule setActiveTab={setActiveTab} />;
-      case 'diagnosis': return <DiagnosisModule />;
-      case 'ripeness': return <RipenessModule />;
-      case 'field': return <FieldModule />;
-      case 'advisory': return <AdvisoryModule />;
-      case 'crop': return <CropModule />;
-      case 'chat': return <ChatbotModal />;
-      default: return <OverviewModule setActiveTab={setActiveTab} />;
-    }
+const tabFromHash = () => {
+  const id = window.location.hash.replace('#', '');
+  return MODULES[id] ? id : 'home';
+};
+
+export default function App() {
+  // Each tool has its own address (#diagnosis, #field, ...) so the browser Back button returns home
+  const [activeTab, setActiveTab] = useState(tabFromHash);
+  const Module = MODULES[activeTab];
+
+  useEffect(() => {
+    const onHashChange = () => {
+      setActiveTab(tabFromHash());
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  const open = (id) => {
+    window.location.hash = id === 'home' ? '' : id;
   };
 
+  if (!Module) {
+    return (
+      <>
+        <PlantBackdrop />
+        <HomePage onOpen={open} />
+      </>
+    );
+  }
+
   return (
-    <div className="app-container">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+    <div className="tool-page">
+      <PlantBackdrop />
+      <nav className="top-bar">
+        <Brand />
+        <button type="button" className="btn-secondary home-button" onClick={() => open('home')}>
+          <ArrowLeft size={16} /> Home
+        </button>
+      </nav>
       <main className="main-content">
         <TopHeader activeTab={activeTab} />
-        {renderContent()}
+        <Module />
       </main>
     </div>
   );

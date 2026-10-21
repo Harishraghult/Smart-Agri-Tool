@@ -70,18 +70,18 @@ export default function ChatbotModal() {
     <div className="glass-panel" style={{ height: '700px', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(16,185,129,0.2)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'color-mix(in srgb, var(--accent-emerald) 20%, transparent)', color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Bot size={22} />
         </div>
         <div>
-          <h3 style={{ fontSize: '1.1rem', color: '#ffffff' }}>AI Agricultural Advisory Chatbot</h3>
-          <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Powered by Agricultural Pathology RAG Engine</p>
+          <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)' }}>AI Agricultural Advisory Chatbot</h3>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Powered by Agricultural Pathology RAG Engine</p>
         </div>
       </div>
 
       {/* Suggestion Chips */}
-      <div style={{ padding: '10px 20px', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px', overflowX: 'auto' }}>
-        <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', shrink: 0 }}>
+      <div style={{ padding: '10px 20px', background: 'var(--surface-inset)', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px', overflowX: 'auto' }}>
+        <span style={{ fontSize: '0.75rem', color: 'var(--accent-emerald)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', shrink: 0 }}>
           <Sparkles size={14} /> Quick Questions:
         </span>
         {SUGGESTIONS.map((sug, i) => (
@@ -109,16 +109,16 @@ export default function ChatbotModal() {
             }}
           >
             {msg.role === 'assistant' && (
-              <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#10b981', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', shrink: 0 }}>
+              <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'var(--accent-emerald)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', shrink: 0 }}>
                 <Bot size={16} />
               </div>
             )}
 
             <div
               style={{
-                background: msg.role === 'user' ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(255,255,255,0.05)',
-                border: msg.role === 'assistant' ? '1px solid rgba(255,255,255,0.08)' : 'none',
-                color: '#ffffff',
+                background: msg.role === 'user' ? 'linear-gradient(135deg, var(--accent-emerald), var(--accent-emerald-dark))' : 'var(--surface-subtle-2)',
+                border: msg.role === 'assistant' ? '1px solid var(--border-color)' : 'none',
+                color: msg.role === 'user' ? '#ffffff' : 'var(--text-primary)',
                 padding: '14px 18px',
                 borderRadius: '16px',
                 fontSize: '0.9rem',
@@ -130,14 +130,14 @@ export default function ChatbotModal() {
             </div>
 
             {msg.role === 'user' && (
-              <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#3b82f6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', shrink: 0 }}>
+              <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'var(--accent-blue)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', shrink: 0 }}>
                 <User size={16} />
               </div>
             )}
           </div>
         ))}
         {loading && (
-          <div style={{ alignSelf: 'flex-start', color: '#94a3b8', fontSize: '0.85rem', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ alignSelf: 'flex-start', color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Sparkles size={16} className="pulse-dot" /> Advisory Assistant is formulating answer...
           </div>
         )}
