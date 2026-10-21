@@ -39,7 +39,10 @@ class FieldService:
             model.classifier[1] = nn.Linear(model.classifier[1].in_features, len(class_names))
             model.load_state_dict(ckpt["model_state_dict"])
             model.to(DEVICE).eval()
-            print(f"Loaded {label} classifier from {path} ({len(class_names)} classes)")
+            # Temperature from training/calibrate.py: the models were trained with label smoothing and
+            # under-state their confidence (a clear beetle photo scored 59.7%); T < 1 corrects that.
+            model.temperature = float(ckpt.get("temperature", 1.0))
+            print(f"Loaded {label} classifier from {path} ({len(class_names)} classes, T={model.temperature:.3f})")
             self.metrics[label.lower()] = {"val_acc": ckpt.get("val_acc"), "test_acc": ckpt.get("test_acc"),
                                            "classes": len(class_names)}
             return model, class_names
@@ -50,7 +53,7 @@ class FieldService:
     def _classify(self, classifier, img_tensor):
         model, class_names = classifier
         with torch.no_grad():
-            probs = torch.softmax(model(img_tensor), dim=1)[0]
+            probs = torch.softmax(model(img_tensor) / getattr(model, "temperature", 1.0), dim=1)[0]
         top_conf, top_idx = torch.topk(probs, min(3, len(class_names)))
         top = [{"class": class_names[i], "confidence": round(float(c), 3)}
                for c, i in zip(top_conf.tolist(), top_idx.tolist())]
@@ -268,7 +271,13 @@ class FieldService:
                 wilting_confidence = 0.91
 
         # Field Health Score (0-100) dynamically calculated
-        field_health_score = max(15, 100 - (pest_count * 12) - (weed_count * 10) - (30 if is_wilted else 0))
+        # A possible (low-confidence) pest/weed sighting is surfaced, not silently scored as "clean"
+        possible_pest = (pest_identification is not None and pest_identification["low_confidence"]
+                         and pest_identification["label"] != "no_pest")
+        possible_weed = (weed_identification is not None and weed_identification["low_confidence"]
+                         and weed_identification["label"] != "Negative")
+        field_health_score = max(15, 100 - (pest_count * 12) - (weed_count * 10) - (30 if is_wilted else 0)
+                                 - (6 if possible_pest else 0) - (5 if possible_weed else 0))
 
         return {
             "field_health_score": field_health_score,
@@ -283,13 +292,17 @@ class FieldService:
             "pest_summary": {
                 "pest_count": pest_count,
                 "pest_detected_list": pests_detected,
-                "risk_level": "High" if pest_count > 3 else ("Moderate" if pest_count > 0 else "Low"),
+                "risk_level": "High" if pest_count > 3 else ("Moderate" if pest_count > 0 else
+                                                              "Uncertain" if possible_pest else "Low"),
+                "possible": pest_identification["label"].capitalize() if possible_pest else None,
                 "identification": pest_identification,
             },
             "weed_summary": {
                 "weed_count": weed_count,
                 "weed_detected_list": weeds_detected,
-                "density_category": "Dense" if weed_count > 3 else ("Sparse" if weed_count > 0 else "Clean"),
+                "density_category": "Dense" if weed_count > 3 else ("Sparse" if weed_count > 0 else
+                                                                    "Uncertain" if possible_weed else "Clean"),
+                "possible": weed_identification["label"] if possible_weed else None,
                 "identification": weed_identification,
             },
             "water_stress": {

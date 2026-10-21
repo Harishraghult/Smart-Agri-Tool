@@ -192,18 +192,18 @@ export default function FieldModule() {
               {result.pest_summary.pest_detected_list.map((item, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: '8px' }}>
                   <span style={{ color: '#e2e8f0' }}>{item.class}</span>
-                  <span style={{ color: '#10b981', fontWeight: 600 }}>{(item.confidence * 100).toFixed(0)}% conf</span>
+                  <span style={{ color: '#10b981', fontWeight: 600 }}>{(item.confidence * 100).toFixed(0)}% likely</span>
                 </div>
               ))}
             </div>
-            {result.pest_summary.identification && result.pest_summary.identification.low_confidence && (
-              <p style={{ marginTop: '12px', fontSize: '0.8rem', color: '#fde68a' }}>
-                Not confident (top guess {result.pest_summary.identification.label} at {(result.pest_summary.identification.confidence * 100).toFixed(0)}%).
+            {result.pest_summary.possible && (
+              <p style={{ marginTop: '12px', fontSize: '0.85rem', color: '#fde68a' }}>
+                ⚠️ Possible {result.pest_summary.possible.toLowerCase()} ({(result.pest_summary.identification.confidence * 100).toFixed(0)}% likely). Please check the plant.
               </p>
             )}
             {result.pest_summary.identification && !result.pest_summary.identification.low_confidence && result.pest_summary.identification.label === 'no_pest' && (
               <p style={{ marginTop: '12px', fontSize: '0.8rem', color: '#10b981' }}>
-                Model found no target species ({(result.pest_summary.identification.confidence * 100).toFixed(0)}% confident).
+                No pests found ({(result.pest_summary.identification.confidence * 100).toFixed(0)}% confident).
               </p>
             )}
           </div>
@@ -225,18 +225,18 @@ export default function FieldModule() {
               {result.weed_summary.weed_detected_list.map((item, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: '8px' }}>
                   <span style={{ color: '#e2e8f0' }}>{item.class}</span>
-                  <span style={{ color: '#10b981', fontWeight: 600 }}>{(item.confidence * 100).toFixed(0)}% conf</span>
+                  <span style={{ color: '#10b981', fontWeight: 600 }}>{(item.confidence * 100).toFixed(0)}% likely</span>
                 </div>
               ))}
             </div>
-            {result.weed_summary.identification && result.weed_summary.identification.low_confidence && (
-              <p style={{ marginTop: '12px', fontSize: '0.8rem', color: '#fde68a' }}>
-                Not confident (top guess {result.weed_summary.identification.label} at {(result.weed_summary.identification.confidence * 100).toFixed(0)}%).
+            {result.weed_summary.possible && (
+              <p style={{ marginTop: '12px', fontSize: '0.85rem', color: '#fde68a' }}>
+                ⚠️ Possible {result.weed_summary.possible} ({(result.weed_summary.identification.confidence * 100).toFixed(0)}% likely). Please check the field.
               </p>
             )}
             {result.weed_summary.identification && !result.weed_summary.identification.low_confidence && result.weed_summary.identification.label === 'Negative' && (
               <p style={{ marginTop: '12px', fontSize: '0.8rem', color: '#10b981' }}>
-                Model found no target species ({(result.weed_summary.identification.confidence * 100).toFixed(0)}% confident).
+                No weeds found ({(result.weed_summary.identification.confidence * 100).toFixed(0)}% confident).
               </p>
             )}
           </div>

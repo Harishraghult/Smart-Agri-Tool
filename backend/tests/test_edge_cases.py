@@ -318,3 +318,26 @@ def test_healthy_leaf_reports_healthy():
 def test_joint_answer_is_default_when_disease_type_model_loaded():
     data = client.post("/api/v1/diagnosis/predict", files={"file": ("x", encode(leaf()), "image/jpeg")}).json()
     assert data["answer_method"] == "joint"
+
+
+# --- Pest / weed confidence calibration ---
+
+from app.services.field_service import field_service  # noqa: E402
+
+
+@pytest.mark.skipif(field_service.pest_classifier is None, reason="pest classifier not trained")
+def test_pest_and_weed_models_are_calibrated():
+    for clf in (field_service.pest_classifier, field_service.weed_classifier):
+        model, _ = clf
+        assert 0.3 < model.temperature < 1.0  # under-confident models get sharpened, not flattened
+
+
+@pytest.mark.skipif(field_service.pest_classifier is None, reason="pest classifier not trained")
+def test_uncertain_pest_is_flagged_not_reported_clean():
+    data = post("/api/v1/field/analyze", (SAMPLES / "field_pest_grasshopper.jpg").read_bytes()).json()
+    p = data["pest_summary"]
+    if p["identification"]["low_confidence"] and p["identification"]["label"] != "no_pest":
+        assert p["risk_level"] == "Uncertain" and p["possible"]
+    else:
+        assert p["possible"] is None
+    assert p["pest_count"] == 1 and p["pest_detected_list"][0]["class"] == "Grasshopper"
