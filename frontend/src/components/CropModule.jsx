@@ -144,6 +144,20 @@ export default function CropModule() {
         </div>
       </div>
 
+      {/* Inputs outside what the model learned from: the recommendation is a guess there */}
+      {result?.out_of_range_features?.length > 0 && (
+        <div className="glass-panel warning-banner">
+          Some values are outside the range the recommender learned from
+          ({result.out_of_range_features.map((f) => `${f.feature} ${f.value} — usual ${f.training_min}–${f.training_max}`).join('; ')}),
+          so treat this recommendation with caution.
+        </div>
+      )}
+      {result?.low_confidence && !result?.out_of_range_features?.length && (
+        <div className="glass-panel warning-banner">
+          Not a clear match: several crops suit these conditions about equally. Compare the top 3 below.
+        </div>
+      )}
+
       {/* Results */}
       {result && (
         <div className="grid-2">
