@@ -191,35 +191,17 @@ export default function FieldModule() {
             <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {result.pest_summary.pest_detected_list.map((item, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', background: 'var(--surface-subtle)', padding: '8px 12px', borderRadius: '8px' }}>
-                  <span style={{ color: 'var(--text-primary)' }}>
-                    {item.class}
-                    {item.group && item.group !== item.class && (
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', display: 'block' }}>{item.group}</span>
-                    )}
-                  </span>
+                  <span style={{ color: 'var(--text-primary)' }}>{item.class}</span>
                   <span style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>{(item.confidence * 100).toFixed(0)}% likely</span>
                 </div>
               ))}
             </div>
-            {result.pest_summary.management?.length > 0 && (
-              <div style={{ marginTop: '12px' }}>
-                <p style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-heading)', marginBottom: '4px' }}>What to do</p>
-                <ul style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', paddingLeft: '18px', lineHeight: '1.5' }}>
-                  {result.pest_summary.management.map((m, i) => <li key={i}>{m}</li>)}
-                </ul>
-              </div>
-            )}
-            {result.pest_summary.beneficial && (
-              <p style={{ marginTop: '12px', fontSize: '0.85rem', color: 'var(--accent-emerald)' }}>
-                🐝 {result.pest_summary.beneficial} spotted: beneficial, not a pest. No action needed.
-              </p>
-            )}
             {result.pest_summary.possible && (
               <p style={{ marginTop: '12px', fontSize: '0.85rem', color: 'var(--warning-text)' }}>
                 ⚠️ Possible {result.pest_summary.possible.toLowerCase()} ({(result.pest_summary.identification.confidence * 100).toFixed(0)}% likely). Please check the plant.
               </p>
             )}
-            {result.pest_summary.identification && !result.pest_summary.identification.low_confidence && result.pest_summary.identification.kind === 'none' && (
+            {result.pest_summary.identification && !result.pest_summary.identification.low_confidence && result.pest_summary.identification.label === 'no_pest' && (
               <p style={{ marginTop: '12px', fontSize: '0.8rem', color: 'var(--accent-emerald)' }}>
                 No pests found ({(result.pest_summary.identification.confidence * 100).toFixed(0)}% confident).
               </p>

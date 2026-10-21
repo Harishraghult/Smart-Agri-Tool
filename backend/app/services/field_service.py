@@ -1,5 +1,4 @@
 import io
-import json
 from PIL import Image
 import torch
 import torch.nn as nn
@@ -65,42 +64,6 @@ class FieldService:
             "top_candidates": top,
         }
 
-    def _pest_key(self, name):
-        # Old 13-class model uses bare folder names ('ants'); the IP102 model uses 'ip102:7' / 'agripests:ants'
-        return name if (":" in name or name == "no_pest") else f"agripests:{name}"
-
-    def _identify_pest(self, img_tensor):
-        """Exact pest + pest group (sum of its labels' probabilities) + group advice."""
-        model, class_names = self.pest_classifier
-        with torch.no_grad():
-            probs = torch.softmax(model(img_tensor) / getattr(model, "temperature", 1.0), dim=1)[0].tolist()
-        labels, groups = self.pest_types["labels"], self.pest_types["groups"]
-        group_prob = {}
-        for name, p in zip(class_names, probs):
-            g = labels.get(self._pest_key(name), {"group": "no_pest"})["group"]
-            group_prob[g] = group_prob.get(g, 0.0) + p
-        top_group = max(group_prob, key=group_prob.get)
-        in_group = [(labels[self._pest_key(n)]["name"], p) for n, p in zip(class_names, probs)
-                    if labels.get(self._pest_key(n), {}).get("group") == top_group]
-        species, species_p = max(in_group, key=lambda t: t[1])
-        ranked = sorted(zip(class_names, probs), key=lambda t: t[1], reverse=True)[:3]
-        info = groups[top_group]
-        return {
-            # 'label' kept for compatibility: the species if it is clear, else the group name
-            "label": species if species_p >= 0.5 else info["display_name"],
-            "species": species,
-            "species_confidence": round(species_p, 3),
-            "group": top_group,
-            "group_name": info["display_name"],
-            "kind": info["kind"],  # pest / beneficial / none
-            "confidence": round(group_prob[top_group], 3),
-            "low_confidence": group_prob[top_group] < settings.CONFIDENCE_THRESHOLD,
-            "management": info["management"],
-            "top_candidates": [{"class": labels[self._pest_key(n)]["name"],
-                                "group": groups[labels[self._pest_key(n)]["group"]]["display_name"],
-                                "confidence": round(p, 3)} for n, p in ranked],
-        }
-
     def _load_yolo(self, path, label):
         if not path.exists():
             return None
@@ -142,8 +105,6 @@ class FieldService:
         self.pest_yolo = self._load_yolo(settings.PEST_YOLO_PATH, "Pest")
         self.weed_yolo = self._load_yolo(settings.WEED_YOLO_PATH, "Weed")
         self.pest_classifier = self._load_classifier(settings.PEST_CLASSIFIER_PATH, "Pest")
-        with open(settings.PEST_TYPES_PATH, encoding="utf-8") as f:
-            self.pest_types = json.load(f)
         self.weed_classifier = self._load_classifier(settings.WEED_CLASSIFIER_PATH, "Weed")
 
         # Load Wilting CNN
@@ -180,11 +141,10 @@ class FieldService:
             pests_detected = self._run_yolo(self.pest_yolo, image_pil)
         elif self.pest_classifier is not None:
             # Whole-image species classification (no localisation): box spans the frame
-            pest_identification = self._identify_pest(img_tensor)
-            if pest_identification["kind"] == "pest" and not pest_identification["low_confidence"]:
+            pest_identification = self._classify(self.pest_classifier, img_tensor)
+            if pest_identification["label"] != "no_pest" and not pest_identification["low_confidence"]:
                 pests_detected.append({
-                    "class": pest_identification["label"],
-                    "group": pest_identification["group_name"],
+                    "class": pest_identification["label"].capitalize(),
                     "confidence": pest_identification["confidence"],
                     "bbox": full_frame,
                 })
@@ -313,10 +273,7 @@ class FieldService:
         # Field Health Score (0-100) dynamically calculated
         # A possible (low-confidence) pest/weed sighting is surfaced, not silently scored as "clean"
         possible_pest = (pest_identification is not None and pest_identification["low_confidence"]
-                         and pest_identification["kind"] == "pest")
-        beneficial = (pest_identification["label"] if pest_identification is not None
-                      and pest_identification["kind"] == "beneficial" and not pest_identification["low_confidence"]
-                      else None)
+                         and pest_identification["label"] != "no_pest")
         possible_weed = (weed_identification is not None and weed_identification["low_confidence"]
                          and weed_identification["label"] != "Negative")
         field_health_score = max(15, 100 - (pest_count * 12) - (weed_count * 10) - (30 if is_wilted else 0)
@@ -337,10 +294,7 @@ class FieldService:
                 "pest_detected_list": pests_detected,
                 "risk_level": "High" if pest_count > 3 else ("Moderate" if pest_count > 0 else
                                                               "Uncertain" if possible_pest else "Low"),
-                "possible": pest_identification["label"] if possible_pest else None,
-                "beneficial": beneficial,
-                "management": pest_identification["management"] if pest_identification
-                              and pest_identification["kind"] == "pest" else [],
+                "possible": pest_identification["label"].capitalize() if possible_pest else None,
                 "identification": pest_identification,
             },
             "weed_summary": {
