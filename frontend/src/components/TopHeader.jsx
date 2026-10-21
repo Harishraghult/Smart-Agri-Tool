@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 
 export default function TopHeader({ activeTab }) {
   const titles = {
@@ -13,33 +13,11 @@ export default function TopHeader({ activeTab }) {
 
   const current = titles[activeTab] || titles.overview;
 
-  const [status, setStatus] = useState(null);
-  useEffect(() => {
-    fetch('/api/v1/status')
-      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
-      .then(setStatus)
-      .catch(() => setStatus({ status: 'offline' }));
-  }, []);
-
-  const online = status?.status === 'online';
-
   return (
     <header className="top-header">
       <div className="header-title">
         <h2>{current.title}</h2>
         <p>{current.subtitle}</p>
-      </div>
-
-      <div
-        className="system-status-pill"
-        style={status && !online ? { opacity: 0.6 } : undefined}
-      >
-        <span className="pulse-dot" style={status && !online ? { background: '#ef4444' } : undefined}></span>
-        <span>
-          {!status && 'Connecting to backend…'}
-          {status && !online && 'Backend Offline'}
-          {online && 'Backend Online'}
-        </span>
       </div>
     </header>
   );

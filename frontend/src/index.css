@@ -195,19 +195,6 @@ h1, h2, h3, h4, h5, h6 {
   margin-top: 4px;
 }
 
-.system-status-pill {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid var(--border-accent);
-  border-radius: 999px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--accent-emerald);
-}
-
 .pulse-dot {
   width: 8px;
   height: 8px;

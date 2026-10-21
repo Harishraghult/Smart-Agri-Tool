@@ -49,14 +49,6 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           );
         })}
       </nav>
-
-      <div style={{ marginTop: 'auto', padding: '14px', background: 'rgba(16,185,129,0.06)', borderRadius: '14px', border: '1px solid rgba(16,185,129,0.2)' }}>
-        <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '4px' }}>FastAPI Backend Engine</p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
-          <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#10b981' }}>Connected & Active</p>
-        </div>
-      </div>
     </aside>
   );
 }
