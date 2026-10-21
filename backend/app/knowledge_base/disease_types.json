@@ -1,0 +1,239 @@
+{
+  "_comment": "Crop-independent disease types. 'types' holds farmer-facing info per type; 'label_to_type' maps every dataset label (PlantVillage, PlantDoc, PlantWild v1/v2) to a type. Labels mapped to null are excluded (fruit-only or non-leaf problems). Shared by scripts/prepare_disease_types.py, training/disease_type/train.py and backend/app/services/disease_type_service.py.",
+  "types": {
+    "healthy": {
+      "display_name": "Healthy",
+      "cause_category": "none",
+      "pathogen_type": "none",
+      "symptoms": [],
+      "management": ["No disease detected: keep scouting weekly", "Maintain balanced fertilisation and irrigation"]
+    },
+    "early_blight": {
+      "display_name": "Early blight",
+      "cause_category": "pathogen",
+      "pathogen_type": "fungus (Alternaria spp.)",
+      "symptoms": ["Brown spots with concentric 'target' rings", "Yellow halo around spots", "Starts on older, lower leaves"],
+      "management": ["Remove infected lower leaves", "Mulch to stop soil splash onto leaves", "Protective fungicide (chlorothalonil, mancozeb or copper) per label", "Rotate away from the same crop family for 2-3 years"]
+    },
+    "late_blight": {
+      "display_name": "Late blight",
+      "cause_category": "pathogen",
+      "pathogen_type": "oomycete (Phytophthora spp.)",
+      "symptoms": ["Large dark, water-soaked patches that spread fast", "White fuzzy growth on leaf undersides in humid weather", "Brown lesions on stems"],
+      "management": ["Act immediately: remove and destroy infected plants (do not compost)", "Systemic + protectant fungicide (e.g. metalaxyl + mancozeb) per label before wet spells", "Avoid overhead irrigation; improve airflow", "Plant resistant varieties and certified seed"]
+    },
+    "leaf_spot": {
+      "display_name": "Fungal leaf spot",
+      "cause_category": "pathogen",
+      "pathogen_type": "fungus (Septoria, Cercospora, Alternaria and related)",
+      "symptoms": ["Many small round or angular spots, often with dark borders or pale centres", "Spots may merge and leaves yellow and drop"],
+      "management": ["Remove and destroy spotted leaves and crop debris", "Water at the base, not over the leaves", "Protective fungicide (copper, chlorothalonil or mancozeb) per label", "Rotate crops and space plants for airflow"]
+    },
+    "leaf_blight": {
+      "display_name": "Leaf blight",
+      "cause_category": "pathogen",
+      "pathogen_type": "fungus",
+      "symptoms": ["Long tan or grey-brown lesions or large dead areas on leaves", "Lesions expand quickly in warm, humid weather"],
+      "management": ["Plant resistant hybrids/varieties", "Bury or remove infected residue; rotate crops", "Fungicide at early disease onset if pressure is high"]
+    },
+    "rust": {
+      "display_name": "Rust",
+      "cause_category": "pathogen",
+      "pathogen_type": "fungus (rust fungi)",
+      "symptoms": ["Orange, reddish-brown or yellow powdery pustules", "Pustules mostly on leaf undersides; leaves yellow and drop"],
+      "management": ["Plant resistant varieties", "Remove infected leaves and nearby alternate hosts where practical", "Fungicide (triazoles, e.g. propiconazole/tebuconazole, or sulfur) at first pustules per label"]
+    },
+    "powdery_mildew": {
+      "display_name": "Powdery mildew",
+      "cause_category": "pathogen",
+      "pathogen_type": "fungus (powdery mildews)",
+      "symptoms": ["White to grey powdery patches on leaf surfaces", "Leaves curl, yellow and dry out"],
+      "management": ["Sulfur, potassium bicarbonate or neem oil at first white spots", "Rotate fungicide groups to avoid resistance", "Improve airflow; avoid excess nitrogen"]
+    },
+    "downy_mildew": {
+      "display_name": "Downy mildew",
+      "cause_category": "pathogen",
+      "pathogen_type": "oomycete (downy mildews)",
+      "symptoms": ["Yellow or pale patches on the upper leaf, limited by veins", "Grey-purple fuzzy growth on the underside in humid conditions"],
+      "management": ["Remove infected leaves; improve airflow and drainage", "Avoid wetting foliage, especially in the evening", "Copper or downy-mildew-specific fungicides (e.g. mancozeb, metalaxyl) per label"]
+    },
+    "bacterial_spot": {
+      "display_name": "Bacterial leaf spot / blight",
+      "cause_category": "pathogen",
+      "pathogen_type": "bacterium (Xanthomonas, Pseudomonas and related)",
+      "symptoms": ["Small water-soaked spots that turn dark, often with yellow halos", "Angular spots limited by veins; leaves may tear or drop"],
+      "management": ["Use disease-free seed and transplants", "Copper-based bactericide sprays per label (fungicides alone do not work)", "Do not work in wet plants; avoid overhead irrigation", "Remove infected debris and rotate crops"]
+    },
+    "viral_disease": {
+      "display_name": "Viral disease (mosaic / leaf curl)",
+      "cause_category": "pathogen",
+      "pathogen_type": "virus",
+      "symptoms": ["Light/dark green mosaic or mottling", "Curled, crinkled, yellowed or stunted leaves"],
+      "management": ["No cure: remove and destroy infected plants", "Control insect vectors (whiteflies, aphids) e.g. with sticky traps, neem or labelled insecticides", "Use virus-free seed and resistant varieties", "Disinfect tools and wash hands after handling infected plants"]
+    },
+    "scab": {
+      "display_name": "Scab",
+      "cause_category": "pathogen",
+      "pathogen_type": "fungus (Venturia and related)",
+      "symptoms": ["Olive-green to dark velvety spots on leaves", "Cracked, corky spots on fruit"],
+      "management": ["Rake and destroy fallen leaves", "Protective fungicide (captan or sulfur) from bud break per label", "Plant scab-resistant varieties; prune for airflow"]
+    },
+    "black_rot": {
+      "display_name": "Black rot",
+      "cause_category": "pathogen",
+      "pathogen_type": "fungus",
+      "symptoms": ["Brown leaf spots with dark borders ('frogeye')", "Shrivelled black fruit (mummies)", "Cankers on branches or canes"],
+      "management": ["Remove mummified fruit and cankered wood", "Fungicide (captan, mancozeb or myclobutanil) during the growing season per label", "Prune for airflow"]
+    },
+    "anthracnose": {
+      "display_name": "Anthracnose",
+      "cause_category": "pathogen",
+      "pathogen_type": "fungus (Colletotrichum and related)",
+      "symptoms": ["Dark, sunken lesions on leaves, stems or fruit", "Lesions may show pink/orange spore masses when wet"],
+      "management": ["Remove infected plant parts and debris", "Avoid overhead irrigation", "Protective fungicide (copper, chlorothalonil) per label", "Use clean planting material"]
+    },
+    "leaf_mold": {
+      "display_name": "Leaf mold",
+      "cause_category": "pathogen",
+      "pathogen_type": "fungus (Passalora fulva)",
+      "symptoms": ["Pale yellow spots on the upper leaf", "Olive-green to brown velvety mould underneath"],
+      "management": ["Lower humidity: ventilate greenhouses, space plants", "Remove infected leaves", "Fungicide (chlorothalonil, copper) per label; resistant varieties"]
+    },
+    "gray_mold": {
+      "display_name": "Gray mold (Botrytis)",
+      "cause_category": "pathogen",
+      "pathogen_type": "fungus (Botrytis cinerea)",
+      "symptoms": ["Grey fuzzy mould on leaves, flowers or fruit", "Soft brown rot of tissue"],
+      "management": ["Remove infected tissue promptly", "Improve airflow; avoid wet foliage", "Fungicide at flowering per label"]
+    },
+    "mite_damage": {
+      "display_name": "Spider mite damage",
+      "cause_category": "pest",
+      "pathogen_type": "pest (spider mites)",
+      "symptoms": ["Fine yellow/white speckling (stippling) on leaves", "Fine webbing on leaf undersides; leaves bronze and dry"],
+      "management": ["Spray leaf undersides with water or insecticidal soap / neem oil", "Release predatory mites", "Use a miticide (e.g. abamectin) per label for heavy infestations"]
+    },
+    "citrus_greening": {
+      "display_name": "Citrus greening (HLB)",
+      "cause_category": "pathogen",
+      "pathogen_type": "bacterium (Candidatus Liberibacter), spread by psyllids",
+      "symptoms": ["Blotchy, asymmetrical yellow mottling", "Small, lopsided, bitter fruit"],
+      "management": ["No cure: remove infected trees", "Control the Asian citrus psyllid", "Plant certified disease-free stock; report to your extension office"]
+    },
+    "esca": {
+      "display_name": "Esca (grapevine trunk disease)",
+      "cause_category": "pathogen",
+      "pathogen_type": "fungus (trunk disease complex)",
+      "symptoms": ["'Tiger-stripe' yellow/red patches between leaf veins", "Dark spotting on berries; sudden vine collapse"],
+      "management": ["Prune in dry weather and protect large cuts", "Remove and destroy dead wood", "Replace severely affected vines"]
+    },
+    "wilt": {
+      "display_name": "Wilt disease",
+      "cause_category": "pathogen",
+      "pathogen_type": "bacterium or fungus (vascular wilt)",
+      "symptoms": ["Leaves wilt even when soil is moist", "Yellowing and browning of whole branches; plant collapse"],
+      "management": ["Remove and destroy wilted plants", "Control insect vectors (e.g. cucumber beetles)", "Use resistant varieties and clean planting material; rotate crops"]
+    },
+    "smut": {
+      "display_name": "Smut",
+      "cause_category": "pathogen",
+      "pathogen_type": "fungus (smut fungi)",
+      "symptoms": ["Swollen galls or heads filled with black powdery spores"],
+      "management": ["Remove galls before they burst", "Use treated or certified seed and resistant varieties", "Rotate crops"]
+    },
+    "leaf_curl": {
+      "display_name": "Taphrina leaf curl",
+      "cause_category": "pathogen",
+      "pathogen_type": "fungus (Taphrina deformans)",
+      "symptoms": ["Thickened, puckered, red-purple curled leaves in spring"],
+      "management": ["Copper or lime-sulfur spray when trees are dormant (late autumn / before bud swell)", "Remove curled leaves; keep trees vigorous"]
+    },
+    "blast": {
+      "display_name": "Blast",
+      "cause_category": "pathogen",
+      "pathogen_type": "fungus (Magnaporthe oryzae)",
+      "symptoms": ["Diamond-shaped grey-centred lesions with brown borders", "Neck rot causing empty panicles"],
+      "management": ["Resistant varieties", "Avoid excess nitrogen; keep fields flooded evenly", "Fungicide (e.g. tricyclazole) per label at early infection"]
+    }
+  },
+  "label_to_type": {
+    "Apple___Apple_scab": "scab", "Apple___Black_rot": "black_rot", "Apple___Cedar_apple_rust": "rust", "Apple___healthy": "healthy",
+    "Blueberry___healthy": "healthy",
+    "Cherry_(including_sour)___Powdery_mildew": "powdery_mildew", "Cherry_(including_sour)___healthy": "healthy",
+    "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot": "leaf_spot", "Corn_(maize)___Common_rust_": "rust",
+    "Corn_(maize)___Northern_Leaf_Blight": "leaf_blight", "Corn_(maize)___healthy": "healthy",
+    "Grape___Black_rot": "black_rot", "Grape___Esca_(Black_Measles)": "esca",
+    "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)": "leaf_spot", "Grape___healthy": "healthy",
+    "Orange___Haunglongbing_(Citrus_greening)": "citrus_greening",
+    "Peach___Bacterial_spot": "bacterial_spot", "Peach___healthy": "healthy",
+    "Pepper,_bell___Bacterial_spot": "bacterial_spot", "Pepper,_bell___healthy": "healthy",
+    "Potato___Early_blight": "early_blight", "Potato___Late_blight": "late_blight", "Potato___healthy": "healthy",
+    "Raspberry___healthy": "healthy", "Soybean___healthy": "healthy", "Squash___Powdery_mildew": "powdery_mildew",
+    "Strawberry___Leaf_scorch": "leaf_spot", "Strawberry___healthy": "healthy",
+    "Tomato___Bacterial_spot": "bacterial_spot", "Tomato___Early_blight": "early_blight", "Tomato___Late_blight": "late_blight",
+    "Tomato___Leaf_Mold": "leaf_mold", "Tomato___Septoria_leaf_spot": "leaf_spot",
+    "Tomato___Spider_mites Two-spotted_spider_mite": "mite_damage", "Tomato___Target_Spot": "leaf_spot",
+    "Tomato___Tomato_Yellow_Leaf_Curl_Virus": "viral_disease", "Tomato___Tomato_mosaic_virus": "viral_disease",
+    "Tomato___healthy": "healthy",
+
+    "Apple_Scab_Leaf": "scab", "Apple_leaf": "healthy", "Apple_rust_leaf": "rust", "Bell_pepper_leaf": "healthy",
+    "Bell_pepper_leaf_spot": "bacterial_spot", "Blueberry_leaf": "healthy", "Cherry_leaf": "healthy",
+    "Corn_Gray_leaf_spot": "leaf_spot", "Corn_leaf_blight": "leaf_blight", "Corn_rust_leaf": "rust", "Peach_leaf": "healthy",
+    "Potato_leaf": "healthy", "Potato_leaf_early_blight": "early_blight", "Potato_leaf_late_blight": "late_blight",
+    "Raspberry_leaf": "healthy", "Soyabean_leaf": "healthy", "Squash_Powdery_mildew_leaf": "powdery_mildew",
+    "Strawberry_leaf": "healthy", "Tomato_Early_blight_leaf": "early_blight", "Tomato_Septoria_leaf_spot": "leaf_spot",
+    "Tomato_leaf": "healthy", "Tomato_leaf_bacterial_spot": "bacterial_spot", "Tomato_leaf_late_blight": "late_blight",
+    "Tomato_leaf_mosaic_virus": "viral_disease", "Tomato_leaf_yellow_virus": "viral_disease", "Tomato_mold_leaf": "leaf_mold",
+    "Tomato_two_spotted_spider_mites_leaf": "mite_damage", "grape_leaf": "healthy", "grape_leaf_black_rot": "black_rot",
+    "Apple_black_rot": "black_rot", "Cherry_powdery_mildew": "powdery_mildew", "Citrus_greening": "citrus_greening",
+    "Corn_leaf": "healthy", "Strawberry_leaf_scorch": "leaf_spot",
+
+    "apple black rot": "black_rot", "apple leaf": "healthy", "apple mosaic virus": "viral_disease", "apple rust": "rust",
+    "apple scab": "scab", "banana leaf": "healthy", "banana panama disease": "wilt", "basil downy mildew": "downy_mildew",
+    "basil leaf": "healthy", "bean halo blight": "bacterial_spot", "bean leaf": "healthy", "bean mosaic virus": "viral_disease",
+    "bean rust": "rust", "bell pepper leaf": "healthy", "bell pepper leaf spot": "bacterial_spot", "blueberry leaf": "healthy",
+    "blueberry rust": "rust", "broccoli downy mildew": "downy_mildew", "broccoli leaf": "healthy",
+    "cabbage alternaria leaf spot": "leaf_spot", "cabbage leaf": "healthy", "carrot cavity spot": null,
+    "cauliflower alternaria leaf spot": "leaf_spot", "cauliflower leaf": "healthy", "celery anthracnose": "anthracnose",
+    "celery early blight": "leaf_spot", "celery leaf": "healthy", "cherry leaf": "healthy", "cherry leaf spot": "leaf_spot",
+    "cherry powdery mildew": "powdery_mildew", "citrus canker": "bacterial_spot", "citrus greening disease": "citrus_greening",
+    "coffee leaf": "healthy", "coffee leaf rust": "rust", "corn gray leaf spot": "leaf_spot", "corn leaf": "healthy",
+    "corn northern leaf blight": "leaf_blight", "corn rust": "rust", "corn smut": "smut",
+    "cucumber angular leaf spot": "bacterial_spot", "cucumber bacterial wilt": "wilt", "cucumber leaf": "healthy",
+    "cucumber powdery mildew": "powdery_mildew", "eggplant cercospora leaf spot": "leaf_spot", "eggplant leaf": "healthy",
+    "garlic leaf": "healthy", "garlic leaf blight": "leaf_blight", "garlic rust": "rust", "ginger leaf": "healthy",
+    "ginger leaf spot": "leaf_spot", "ginger sheath blight": "leaf_blight", "grape black rot": "black_rot",
+    "grape downy mildew": "downy_mildew", "grape leaf": "healthy", "grape leaf spot": "leaf_spot",
+    "grapevine leafroll disease": "viral_disease", "lettuce downy mildew": "downy_mildew", "lettuce leaf": "healthy",
+    "lettuce mosaic virus": "viral_disease", "maple leaf": "healthy", "maple tar spot": "leaf_spot", "peach leaf": "healthy",
+    "peach leaf curl": "leaf_curl", "plum leaf": "healthy", "plum pocket disease": null, "potato early blight": "early_blight",
+    "potato late blight": "late_blight", "potato leaf": "healthy", "raspberry leaf": "healthy", "rice blast": "blast",
+    "rice leaf": "healthy", "rice sheath blight": "leaf_blight", "soybean leaf": "healthy", "squash leaf": "healthy",
+    "squash powdery mildew": "powdery_mildew", "strawberry anthracnose": "anthracnose", "strawberry leaf": "healthy",
+    "strawberry leaf scorch": "leaf_spot", "tobacco leaf": "healthy", "tobacco mosaic virus": "viral_disease",
+    "tomato bacterial leaf spot": "bacterial_spot", "tomato early blight": "early_blight", "tomato late blight": "late_blight",
+    "tomato leaf": "healthy", "tomato leaf mold": "leaf_mold", "tomato mosaic virus": "viral_disease",
+    "tomato septoria leaf spot": "leaf_spot", "tomato yellow leaf curl virus": "viral_disease",
+    "zucchini yellow mosaic virus": "viral_disease",
+
+    "banana anthracnose": "anthracnose", "banana black leaf streak": "leaf_spot", "banana bunchy top": "viral_disease",
+    "banana cigar end rot": null, "banana cordana leaf spot": "leaf_spot", "bell pepper bacterial spot": "bacterial_spot",
+    "bell pepper blossom end rot": null, "bell pepper frogeye leaf spot": "leaf_spot", "bell pepper powdery mildew": "powdery_mildew",
+    "blueberry anthracnose": "anthracnose", "blueberry botrytis blight": "gray_mold", "blueberry mummy berry": null,
+    "blueberry scorch": "viral_disease", "broccoli alternaria leaf spot": "leaf_spot", "broccoli ring spot": "leaf_spot",
+    "cabbage black rot": "bacterial_spot", "cabbage downy mildew": "downy_mildew", "carrot alternaria leaf blight": "leaf_blight",
+    "carrot cercospora leaf blight": "leaf_blight", "cauliflower bacterial soft rot": null, "coffee berry blotch": null,
+    "coffee black rot": "black_rot", "coffee brown eye spot": "leaf_spot", "eggplant phomopsis fruit rot": null,
+    "eggplant phytophthora blight": "late_blight", "peach anthracnose": "anthracnose", "peach brown rot": null,
+    "peach rust": "rust", "peach scab": "scab", "plum bacterial spot": "bacterial_spot", "plum brown rot": null,
+    "plum pox virus": "viral_disease", "plum rust": "rust", "raspberry fire blight": "bacterial_spot",
+    "raspberry gray mold": "gray_mold", "raspberry leaf spot": "leaf_spot", "raspberry yellow rust": "rust",
+    "soybean bacterial blight": "bacterial_spot", "soybean brown spot": "leaf_spot", "soybean downy mildew": "downy_mildew",
+    "soybean frog eye leaf spot": "leaf_spot", "soybean mosaic": "viral_disease", "soybean rust": "rust",
+    "tobacco blue mold": "downy_mildew", "tobacco brown spot": "leaf_spot", "tobacco frogeye leaf spot": "leaf_spot",
+    "wheat bacterial leaf streak (black chaff)": "bacterial_spot", "wheat head scab": null, "wheat leaf rust": "rust",
+    "wheat loose smut": "smut", "wheat powdery mildew": "powdery_mildew", "wheat septoria blotch": "leaf_spot",
+    "wheat stem rust": "rust", "wheat stripe rust": "rust", "zucchini bacterial wilt": "wilt",
+    "zucchini downy mildew": "downy_mildew", "zucchini powdery mildew": "powdery_mildew"
+  }
+}

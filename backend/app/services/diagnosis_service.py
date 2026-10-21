@@ -11,6 +11,7 @@ from app.config import settings
 from app.services.image_utils import load_rgb_image
 from app.services.image_router_service import image_router_service, UNCLEAR_IMAGE_WARNING
 from app.services.species_service import species_service
+from app.services.disease_type_service import disease_type_service, METHODS as DISEASE_TYPE_METHODS
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 IMG_SIZE = 224
@@ -95,6 +96,14 @@ def available_model_choices() -> dict:
     return choices
 
 
+# Human-readable names of the models behind each answer (shown in the UI)
+ENGINE_NAMES = {
+    "efficientnet_b0_plantvillage": "Lab model (EfficientNet-B0, PlantVillage)",
+    "efficientnet_b0_plantdoc": "Farm model (EfficientNet-B0, PlantDoc + PlantWild)",
+    "demo": "no trained model",
+}
+
+
 class InvalidModelChoiceError(ValueError):
     """Unknown disease-model choice; message is safe to show."""
 
@@ -146,6 +155,7 @@ class DiagnosisService:
             "disease_field_classifier": self.field_model is not None,
             "image_router": image_router_service.model is not None,
             "species_identifier": species_service.model is not None,
+            "disease_type_classifier": disease_type_service.model is not None,
             "unet_segmentation": self.unet_model is not None,
             "cause_category_lookup": bool(self.cause_lookup),
         }
@@ -198,6 +208,44 @@ class DiagnosisService:
             except Exception as e:
                 print(f"Error loading U-Net model: {e}")
 
+    def _severity(self, image, img_tensor, healthy):
+        """Lesion area %: U-Net if trained, else HSV colour segmentation of brown/chlorotic pixels."""
+        import cv2
+        severity_score = 0.0
+        if self.unet_model is not None:
+            with torch.no_grad():
+                seg_out = self.unet_model(img_tensor)
+                seg_prob = torch.sigmoid(seg_out)[0, 0]
+                lesion_pixels = (seg_prob > 0.5).sum().item()
+                total_pixels = seg_prob.numel()
+                severity_score = round((lesion_pixels / total_pixels) * 100, 2)
+        else:
+            # Dynamic lesion surface area estimation from actual leaf pixels
+            if healthy:
+                severity_score = 0.0
+            else:
+                try:
+                    img_np = np.array(image)
+                    hsv = cv2.cvtColor(img_np, cv2.COLOR_RGB2HSV)
+                    h, s, v = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
+                    
+                    # Foreground leaf mask (excluding extreme background)
+                    leaf_mask = (s > 25) & (v > 30) & (v < 240)
+                    leaf_area = int(leaf_mask.sum())
+                    
+                    if leaf_area > 100:
+                        # Brown necrosis, fungal lesions, yellow halo chlorosis
+                        brown_lesions = (h < 25) & (s > 35) & (v < 185) & leaf_mask
+                        yellow_chlorosis = (h >= 18) & (h <= 36) & (s > 65) & leaf_mask
+                        lesion_pixels = int(brown_lesions.sum() + yellow_chlorosis.sum())
+                        calc_pct = round((lesion_pixels / leaf_area) * 100, 1)
+                        severity_score = max(2.5, min(78.0, calc_pct))
+                    else:
+                        severity_score = 19.5
+                except Exception:
+                    severity_score = 19.5
+        return severity_score
+
     def _class_probs(self, model, transform, image, tta):
         x = transform(image).unsqueeze(0).to(DEVICE)
         with torch.no_grad():
@@ -215,9 +263,14 @@ class DiagnosisService:
         masked = probs * mask
         return masked / masked.sum().clamp_min(1e-12)
 
-    def predict(self, image_bytes: bytes, crop_type: str = None, model_choice: str = "auto") -> dict:
-        import cv2
+    def predict(self, image_bytes: bytes, crop_type: str = None, model_choice: str = "auto",
+                disease_type_method: str = None) -> dict:
         model_choice = (model_choice or "auto").strip().lower()
+        disease_type_method = (disease_type_method or disease_type_service.default_method()).strip().lower()
+        if disease_type_method not in disease_type_service.available_methods():
+            raise InvalidModelChoiceError(
+                f"Unknown or unavailable disease-type method '{disease_type_method}'. "
+                f"Choose one of: {', '.join(disease_type_service.available_methods())}.")
         if model_choice not in MODEL_CHOICES:
             raise InvalidModelChoiceError(f"Unknown model '{model_choice}'. Choose one of: {', '.join(MODEL_CHOICES)}.")
         if model_choice in ("farm", "farm_bioclip") and self.field_model is None:
@@ -225,7 +278,15 @@ class DiagnosisService:
         if model_choice == "farm_bioclip" and species_service.model is None:
             raise InvalidModelChoiceError("BioCLIP-2 is turned off on this server (SPECIES_ID_ENABLED=false); "
                                           "choose the Farm model instead.")
-        crop_display, crop_prefix = resolve_crop(crop_type)
+        # Unsupported / unlisted crop: answer with the disease type only (needs the disease-type model)
+        unsupported_crop = None
+        try:
+            crop_display, crop_prefix = resolve_crop(crop_type)
+        except UnsupportedCropError:
+            if disease_type_service.model is None:
+                raise
+            crop_display, crop_prefix = None, None
+            unsupported_crop = "Unlisted crop" if crop_type.strip().lower() in ("other", "unlisted") else crop_type.strip()
         image = load_rgb_image(image_bytes)
         img_tensor = EVAL_TRANSFORM(image).unsqueeze(0).to(DEVICE)
 
@@ -258,13 +319,20 @@ class DiagnosisService:
         if crop_prefix is None and input_warning is None and use_species and not colour_altered:
             crop_detected = species_service.identify(image)
             if crop_detected and crop_detected["confident"]:
-                if not crop_detected["supported"]:
+                if not crop_detected["supported"] and disease_type_service.model is not None:
+                    unsupported_crop = crop_detected["species"]
+                elif not crop_detected["supported"]:
                     raise UnsupportedCropError(
                         f"This looks like {crop_detected['species'].lower()} ({crop_detected['scientific_name']}, "
                         f"{crop_detected['confidence']:.0%} sure), which isn't supported yet, so a diagnosis would "
                         f"be a guess. Supported crops: {', '.join(SUPPORTED_CROPS)}. If it is actually one of "
                         "these, select it in the Crop list.")
-                crop_prefix = SUPPORTED_CROPS[crop_detected["species"]]
+                else:
+                    crop_prefix = SUPPORTED_CROPS[crop_detected["species"]]
+
+        if unsupported_crop is not None:
+            return self._disease_type_only(image, img_tensor, unsupported_crop, image_type, input_warning,
+                                           model_choice, crop_detected)
 
         # 1. Classification, restricted to the user's crop when given (field photos: 64.8% -> 80.8%)
         candidates = []
@@ -311,42 +379,20 @@ class DiagnosisService:
         crop_type = parts[0].replace("_", " ").replace(",", "") if len(parts) > 0 else "Unknown Crop"
         condition = parts[1].replace("_", " ") if len(parts) > 1 else "Unknown Condition"
 
-        # 2. U-Net Severity Segmentation or Dynamic Vision Lesion Calculation
-        severity_score = 0.0
-        if self.unet_model is not None:
-            with torch.no_grad():
-                seg_out = self.unet_model(img_tensor)
-                seg_prob = torch.sigmoid(seg_out)[0, 0]
-                lesion_pixels = (seg_prob > 0.5).sum().item()
-                total_pixels = seg_prob.numel()
-                severity_score = round((lesion_pixels / total_pixels) * 100, 2)
-        else:
-            # Dynamic lesion surface area estimation from actual leaf pixels
-            if "healthy" in condition.lower():
-                severity_score = 0.0
-            else:
-                try:
-                    img_np = np.array(image)
-                    hsv = cv2.cvtColor(img_np, cv2.COLOR_RGB2HSV)
-                    h, s, v = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
-                    
-                    # Foreground leaf mask (excluding extreme background)
-                    leaf_mask = (s > 25) & (v > 30) & (v < 240)
-                    leaf_area = int(leaf_mask.sum())
-                    
-                    if leaf_area > 100:
-                        # Brown necrosis, fungal lesions, yellow halo chlorosis
-                        brown_lesions = (h < 25) & (s > 35) & (v < 185) & leaf_mask
-                        yellow_chlorosis = (h >= 18) & (h <= 36) & (s > 65) & leaf_mask
-                        lesion_pixels = int(brown_lesions.sum() + yellow_chlorosis.sum())
-                        calc_pct = round((lesion_pixels / leaf_area) * 100, 1)
-                        severity_score = max(2.5, min(78.0, calc_pct))
-                    else:
-                        severity_score = 19.5
-                except Exception:
-                    severity_score = 19.5
+        # 2. Lesion severity
+        severity_score = self._severity(image, img_tensor, healthy="healthy" in condition.lower())
 
-        # 3. Knowledge Base Lookup
+        # 3. Crop-independent disease type (A: aggregate this model's scores, B: dedicated model)
+        if disease_type_method == "model":
+            disease_type = disease_type_service.classify(image)
+        elif disease_type_method == "combined" and probs is not None:
+            disease_type = disease_type_service.combine(image, probs, pv_names, ENGINE_NAMES[classifier_engine])
+        elif probs is not None:
+            disease_type = disease_type_service.aggregate(probs, pv_names, ENGINE_NAMES[classifier_engine])
+        else:
+            disease_type = None
+
+        # 4. Knowledge Base Lookup
         kb_info = self.cause_lookup.get(predicted_class, {})
         cause_category = kb_info.get("cause_category", "pathogen" if "healthy" not in condition.lower() else "none")
         pathogen_type = kb_info.get("pathogen_type", "fungus" if cause_category == "pathogen" else "none")
@@ -378,10 +424,53 @@ class DiagnosisService:
             "model_choice": model_choice,
             "crop_detected": crop_detected,
             "input_warning": input_warning,
+            "disease_type": disease_type,
+            "disease_type_only": False,
+            "unsupported_crop": None,
+            "models_used": {
+                "crop_specific_diagnosis": ENGINE_NAMES[classifier_engine],
+                "disease_type": (disease_type or {}).get("model"),
+            },
             "inference_engine": {
                 "classifier": classifier_engine,
                 "severity": "unet" if self.unet_model is not None else "hsv_heuristic",
             }
+        }
+
+    def _disease_type_only(self, image, img_tensor, crop_name, image_type, input_warning, model_choice,
+                           crop_detected) -> dict:
+        """Crop the crop-specific models don't know: report the disease type from model B only."""
+        dt = disease_type_service.classify(image)
+        info = disease_type_service.info(dt["type"])
+        healthy = dt["type"] == "healthy"
+        return {
+            "predicted_class": None,
+            "crop_type": crop_name,
+            "condition": dt["display_name"],
+            "confidence": dt["confidence"],
+            "top_candidates": [],
+            "cause_category": info.get("cause_category", "pathogen"),
+            "pathogen_type": info.get("pathogen_type"),
+            "pathogen_name": None,
+            "severity_score": self._severity(image, img_tensor, healthy=healthy),
+            "symptoms": info.get("symptoms", []),
+            "remedies": info.get("management", []),
+            "is_healthy": healthy,
+            "low_confidence": dt["low_confidence"] or input_warning is not None,
+            "image_type": image_type,
+            "preprocessing": image.info.get("preprocessing", []),
+            "crop_selected": None,
+            "model_choice": model_choice,
+            "crop_detected": crop_detected,
+            "input_warning": input_warning,
+            "disease_type": dt,
+            "disease_type_only": True,
+            "unsupported_crop": crop_name,
+            "models_used": {"crop_specific_diagnosis": None, "disease_type": dt["model"]},
+            "inference_engine": {
+                "classifier": "disease_type_model",
+                "severity": "unet" if self.unet_model is not None else "hsv_heuristic",
+            },
         }
 
 

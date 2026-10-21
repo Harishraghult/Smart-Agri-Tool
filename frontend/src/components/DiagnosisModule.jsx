@@ -14,6 +14,9 @@ export default function DiagnosisModule() {
   // Which disease model to run; 'auto' lets the image router pick per photo
   const [modelChoice, setModelChoice] = useState('auto');
   const [availableModels, setAvailableModels] = useState(['auto', 'lab', 'farm']);
+  // Crop-independent disease type: 'model' (B, dedicated model) or 'aggregated' (A, from the crop model)
+  const [dtMethod, setDtMethod] = useState('aggregated');
+  const [dtMethods, setDtMethods] = useState([{ id: 'aggregated', description: 'Aggregated (A)' }]);
 
   const MODEL_LABELS = {
     auto: 'Auto (recommended): picks Lab or Farm per photo',
@@ -25,7 +28,13 @@ export default function DiagnosisModule() {
   useEffect(() => {
     fetch('/api/v1/diagnosis/models')
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
-      .then((data) => setAvailableModels(data.models.map((m) => m.id)))
+      .then((data) => {
+        setAvailableModels(data.models.map((m) => m.id));
+        if (data.disease_type_methods) {
+          setDtMethods(data.disease_type_methods);
+          setDtMethod(data.disease_type_default);
+        }
+      })
       .catch(() => {});
     fetch('/api/v1/diagnosis/crops')
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
@@ -48,18 +57,15 @@ export default function DiagnosisModule() {
     healthy: { file: 'tomato_healthy.jpg', crop: 'Tomato' },
   };
 
-  const runDiagnosis = async (imageFile, cropChoice = crop, modelSel = modelChoice) => {
+  const runDiagnosis = async (imageFile, cropChoice = crop, modelSel = modelChoice, dtSel = dtMethod) => {
     setResult(null);
     setError(null);
-    if (cropChoice === 'other') {
-      setError(`Your crop isn't supported yet, so any diagnosis would be a guess. Supported crops: ${supportedCrops.join(', ')}.`);
-      return;
-    }
     setLoading(true);
     const formData = new FormData();
     formData.append('file', imageFile);
     if (cropChoice !== 'auto') formData.append('crop_type', cropChoice);
     formData.append('model', modelSel);
+    formData.append('disease_type_method', dtSel);
     try {
       setResult(await postForm('/api/v1/diagnosis/predict', formData));
     } catch (err) {
@@ -139,7 +145,7 @@ export default function DiagnosisModule() {
               >
                 <option value="auto">Auto-detect (less accurate)</option>
                 {supportedCrops.map((c) => <option key={c} value={c}>{c}</option>)}
-                <option value="other">Other / not listed</option>
+                <option value="other">Other / not listed (disease type only)</option>
               </select>
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}>
@@ -155,6 +161,21 @@ export default function DiagnosisModule() {
                 style={{ flex: 1, padding: '8px 10px', borderRadius: '10px', background: 'rgba(15,23,42,0.8)', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.15)' }}
               >
                 {availableModels.map((id) => <option key={id} value={id}>{MODEL_LABELS[id] || id}</option>)}
+              </select>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}>
+              Disease type from:
+              <select
+                value={dtMethod}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setDtMethod(next);
+                  if (file) runDiagnosis(file, crop, modelChoice, next);
+                }}
+                disabled={loading}
+                style={{ flex: 1, padding: '8px 10px', borderRadius: '10px', background: 'rgba(15,23,42,0.8)', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.15)' }}
+              >
+                {dtMethods.map((m) => <option key={m.id} value={m.id}>{m.description.split(':')[0]}</option>)}
               </select>
             </label>
             <label className="dropzone" style={{ display: 'block' }}>
@@ -203,7 +224,10 @@ export default function DiagnosisModule() {
       {result?.low_confidence && !result?.input_warning && (
         <div className="glass-panel warning-banner">
           Not confident: the model's top guess is only {(result.confidence * 100).toFixed(1)}%.
-          Other candidates: {result.top_candidates?.slice(1).map((c) => `${c.class.replace(/___/g, ' — ').replace(/_/g, ' ')} (${c.percentage})`).join(', ')}.
+          Other candidates: {(result.disease_type_only
+            ? result.disease_type?.top_candidates?.slice(1).map((c) => `${c.display_name} (${c.percentage})`)
+            : result.top_candidates?.slice(1).map((c) => `${c.class.replace(/___/g, ' — ').replace(/_/g, ' ')} (${c.percentage})`)
+          )?.join(', ')}.
           Retake the photo with a single, well-lit leaf filling the frame.
         </div>
       )}
@@ -213,6 +237,25 @@ export default function DiagnosisModule() {
         <div className="grid-2">
           {/* Main Diagnosis Card */}
           <div className="glass-panel" style={{ padding: '24px' }}>
+            {result.disease_type && (
+              <div style={{ marginBottom: '18px', padding: '14px 16px', borderRadius: '12px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)' }}>
+                <p style={{ fontSize: '0.75rem', color: '#94a3b8', letterSpacing: '0.04em' }}>DISEASE TYPE (ANY CROP)</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '4px' }}>
+                  <span style={{ fontSize: '1.35rem', fontWeight: 700, color: '#ffffff' }}>{result.disease_type.display_name}</span>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 700, color: result.disease_type.low_confidence ? '#f59e0b' : '#10b981' }}>
+                    {(result.disease_type.confidence * 100).toFixed(1)}%
+                  </span>
+                </div>
+                {result.disease_type.top_candidates?.length > 1 && (
+                  <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px' }}>
+                    Also possible: {result.disease_type.top_candidates.slice(1).map((c) => `${c.display_name} (${c.percentage})`).join(', ')}
+                  </p>
+                )}
+                <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '6px' }}>
+                  By: {{ model: 'Disease-type model (B)', combined: 'Combined (A+B)', aggregated: 'Aggregated (A)' }[result.disease_type.method]}: {result.disease_type.model}
+                </p>
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
               <div>
                 <span className={`badge ${getBadgeClass(result.cause_category)}`}>
@@ -222,11 +265,14 @@ export default function DiagnosisModule() {
                   {result.crop_type} — {result.condition}
                 </h3>
                 <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '4px' }}>
-                  Model: {MODEL_LABELS[result.model_choice]?.split(':')[0] || result.model_choice}
-                  {' '}(answered by the {result.inference_engine?.classifier?.endsWith('plantdoc') ? 'Farm' : 'Lab'} model)
+                  {result.disease_type_only
+                    ? "This crop isn't covered by the crop-specific models, so only the disease type is shown."
+                    : `Crop-specific diagnosis by: ${result.models_used?.crop_specific_diagnosis} (model setting: ${MODEL_LABELS[result.model_choice]?.split(':')[0] || result.model_choice})`}
                 </p>
                 <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '2px' }}>
-                  {result.crop_selected
+                  {result.disease_type_only
+                    ? `Crop: ${result.unsupported_crop}`
+                    : result.crop_selected
                     ? `Crop: ${result.crop_selected} (selected by you)`
                     : result.crop_detected?.confident
                       ? `Crop identified as ${result.crop_detected.species} (${Math.round(result.crop_detected.confidence * 100)}% sure). If that is wrong, select your crop above.`

@@ -70,6 +70,29 @@ Every API response carries an `inference_engine` field saying whether a trained 
 
 ---
 
+## 🦠 Disease Type (any crop)
+
+Every diagnosis also reports a crop-independent **disease type** (22 types: early blight, late blight,
+rust, powdery mildew, downy mildew, fungal leaf spot, bacterial spot, viral disease, scab, black rot,
+anthracnose, leaf blight, leaf mold, gray mold, mite damage, citrus greening, esca, wilt, smut, leaf curl,
+blast, healthy), with general management advice and the name of the model that produced it.
+Types and the mapping of every dataset label: `backend/app/knowledge_base/disease_types.json`.
+
+Three methods (`disease_type_method` form field; menu in `GET /api/v1/diagnosis/models`):
+
+| Method | Lab (PlantVillage) | Farm (PlantDoc) | Farm (PlantWild v1 / v2) | Unsupported crops* |
+| :--- | :--- | :--- | :--- | :--- |
+| **B. Disease-type model** (default) | 98.7% | 81.2% | **76.2% / 68.9%** | **81.5%** |
+| A+B. Combined | **99.8%** | **85.6%** | 75.0% / 54.4% | 76.5% |
+| A. Aggregated from the crop-specific model | 99.7% | 85.4% | 63.7% / 25.2% | 59.5% |
+
+\*Crops the crop-specific models don't know (cucumber, wheat, banana, rice, …), crop left on Auto-detect.
+Model B is an EfficientNet-B0 trained on PlantVillage + PlantDoc (+ leaf crops) + PlantWild v1/v2
+(37k training photos, 30+ crops; `scripts/prepare_disease_types.py`, `training/disease_type/train.py`);
+89.4% on its 9,940-photo test split. Choosing **"Other / not listed"** as the crop returns the disease type
+only, instead of a crop-specific guess. Weakest types: gray mold (only 63 training photos), downy mildew,
+fungal leaf spot.
+
 ## 🌾 Crop Selection
 
 The Diagnosis tab asks for the crop (or "Auto-detect"). A selected crop restricts the diagnosis to that
@@ -232,6 +255,8 @@ python training/field_classifiers/train.py --task weed         # -> models/weed_
 python scripts/prepare_plantdoc_crops.py                       # leaf crops from PlantDoc boxes (val/test duplicates removed)
 python scripts/prepare_plantwild.py                            # PlantWild -> field classes (CC-BY-NC-ND: non-commercial only)
 python training/disease_classifier/train_field.py              # -> models/disease_classifier_field.pt
+python scripts/prepare_disease_types.py                        # disease-type manifest (leakage-checked)
+python training/disease_type/train.py                          # -> models/disease_type_classifier.pt
 python training/image_router/train.py                          # -> models/image_router.pt
 python training/ripeness_classifier/train.py --skip-stage1 --epochs-stage2 8 --lr-stage2 3e-4
                                                                # -> models/ripeness_stage2_banana.pt

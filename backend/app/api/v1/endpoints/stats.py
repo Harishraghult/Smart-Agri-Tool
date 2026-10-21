@@ -11,6 +11,7 @@ from app.services.field_service import field_service
 from app.services.crop_recommender_service import crop_recommender_service
 from app.services.ripeness_service import ripeness_service
 from app.services.image_router_service import image_router_service
+from app.services.disease_type_service import disease_type_service
 
 router = APIRouter()
 
@@ -57,6 +58,7 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
             "crop_recommender": crop_recommender_service.metrics,
             "ripeness_classifier": ripeness_service.metrics,
             "image_router": image_router_service.metrics,
+            "disease_type_classifier": disease_type_service.metrics,
             **{f"{k}_classifier": v for k, v in field_service.metrics.items()},
         },
     }

@@ -152,12 +152,18 @@ def test_supported_crops_listed():
     assert "Potato" in crops and "Tomato" in crops
 
 
-@pytest.mark.parametrize("crop", ["Pear", "Betel", "Cassava"])
-def test_unsupported_crop_rejected_with_reason(crop):
+@pytest.mark.parametrize("crop", ["Pear", "Betel", "Cassava", "other"])
+def test_unsupported_crop_gets_disease_type_or_clear_rejection(crop):
+    from app.services.disease_type_service import disease_type_service
     r = client.post("/api/v1/diagnosis/predict", files={"file": ("x", encode(leaf()), "image/jpeg")},
                     data={"crop_type": crop})
-    assert r.status_code == 422
-    assert "not supported" in r.json()["detail"]
+    if disease_type_service.model is None:
+        assert r.status_code == 422
+        assert "not supported" in r.json()["detail"]
+    else:  # crop-specific models can't help, so the disease-type model answers on its own
+        data = r.json()
+        assert r.status_code == 200 and data["disease_type_only"] is True
+        assert data["predicted_class"] is None and data["disease_type"]["method"] == "model"
 
 
 @needs_models
@@ -245,3 +251,48 @@ def test_every_predictable_class_has_knowledge_base_entry():
         assert not unmapped, f"field-model classes without a PlantVillage mapping: {unmapped}"
     missing = sorted(c for c in reachable if c not in kb)
     assert not missing, f"no knowledge-base entry for: {missing}"
+
+
+
+# --- Crop-independent disease type ---
+
+from app.services.disease_type_service import disease_type_service  # noqa: E402
+
+
+@needs_models
+def test_disease_type_aggregated_from_crop_model():
+    data = client.post("/api/v1/diagnosis/predict", files={"file": ("x", encode(leaf()), "image/jpeg")},
+                       data={"disease_type_method": "aggregated"}).json()
+    dt = data["disease_type"]
+    assert dt["type"] == "early_blight" and dt["method"] == "aggregated"
+    assert "Lab model" in dt["model"] and data["models_used"]["disease_type"] == dt["model"]
+
+
+@pytest.mark.skipif(disease_type_service.model is None, reason="disease-type model not trained")
+def test_disease_type_model_on_supported_crop():
+    data = client.post("/api/v1/diagnosis/predict", files={"file": ("x", encode(leaf()), "image/jpeg")},
+                       data={"disease_type_method": "model"}).json()
+    assert data["disease_type"]["type"] == "early_blight" and data["disease_type"]["method"] == "model"
+    assert data["predicted_class"] == "Tomato___Early_blight"  # crop-specific answer unchanged
+
+
+def test_disease_type_methods_listed():
+    data = client.get("/api/v1/diagnosis/models").json()
+    ids = [m["id"] for m in data["disease_type_methods"]]
+    assert "aggregated" in ids
+    assert ("model" in ids) == (disease_type_service.model is not None)
+
+
+def test_every_disease_type_has_farmer_info():
+    for t, info in disease_type_service.types.items():
+        assert info["display_name"] and "management" in info, t
+
+
+@pytest.mark.skipif(disease_type_service.model is None, reason="disease-type model not trained")
+def test_disease_type_combined_method_and_default():
+    data = client.post("/api/v1/diagnosis/predict", files={"file": ("x", encode(leaf()), "image/jpeg")},
+                       data={"disease_type_method": "combined"}).json()
+    assert data["disease_type"]["method"] == "combined" and data["disease_type"]["type"] == "early_blight"
+    menu = client.get("/api/v1/diagnosis/models").json()
+    assert menu["disease_type_default"] == "model"
+    assert [m["id"] for m in menu["disease_type_methods"]] == ["model", "combined", "aggregated"]

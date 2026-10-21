@@ -43,6 +43,8 @@ class Settings(BaseSettings):
         MODELS / "disease_classifier_field.pt",
         BASE_DIR / "checkpoints" / "model_stage2_plantdoc.pt",
     )
+    # Crop-independent disease type ("early blight", "rust", ...): training/disease_type/train.py
+    DISEASE_TYPE_MODEL_PATH: Path = MODELS / "disease_type_classifier.pt"
     # Routes uploads to the right model: lab_leaf / field_leaf / fruit / other
     IMAGE_ROUTER_PATH: Path = MODELS / "image_router.pt"
     UNET_SEGMENTATION_PATH: Path = MODELS / "unet_lesion_segmentation.pt"
@@ -78,6 +80,7 @@ class Settings(BaseSettings):
 
     # Knowledge Base
     CAUSE_LOOKUP_PATH: Path = APP_DIR / "knowledge_base" / "cause_category_lookup.json"
+    DISEASE_TYPES_PATH: Path = APP_DIR / "knowledge_base" / "disease_types.json"
 
     # Database
     DATABASE_URL: str = f"sqlite:///{APP_DIR.parent}/agri_system.db"
