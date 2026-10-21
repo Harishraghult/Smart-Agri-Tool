@@ -336,8 +336,24 @@ def test_pest_and_weed_models_are_calibrated():
 def test_uncertain_pest_is_flagged_not_reported_clean():
     data = post("/api/v1/field/analyze", (SAMPLES / "field_pest_grasshopper.jpg").read_bytes()).json()
     p = data["pest_summary"]
-    if p["identification"]["low_confidence"] and p["identification"]["label"] != "no_pest":
+    if p["identification"]["low_confidence"] and p["identification"]["kind"] == "pest":
         assert p["risk_level"] == "Uncertain" and p["possible"]
     else:
         assert p["possible"] is None
-    assert p["pest_count"] == 1 and p["pest_detected_list"][0]["class"] == "Grasshopper"
+    assert p["pest_count"] == 1 and "Grasshopper" in p["pest_detected_list"][0]["group"]
+    assert p["management"]  # group treatment advice is returned
+
+
+@pytest.mark.skipif(field_service.pest_classifier is None, reason="pest classifier not trained")
+def test_every_pest_class_has_name_and_group():
+    _, names = field_service.pest_classifier
+    labels, groups = field_service.pest_types["labels"], field_service.pest_types["groups"]
+    for n in names:
+        key = field_service._pest_key(n)
+        assert key in labels and labels[key]["group"] in groups, n
+
+
+@pytest.mark.skipif(field_service.pest_classifier is None, reason="pest classifier not trained")
+def test_plain_leaf_has_no_pest():
+    data = post("/api/v1/field/analyze", (SAMPLES / "tomato_healthy.jpg").read_bytes()).json()
+    assert data["pest_summary"]["pest_count"] == 0

@@ -144,7 +144,7 @@ def test_disease_prediction_on_real_leaf(name, expected):
 @pytest.mark.skipif(field_service.pest_classifier is None, reason="pest classifier not trained")
 def test_pest_identification_on_real_photo():
     data = _post_sample("/api/v1/field/analyze", "field_pest_grasshopper.jpg")
-    assert data["pest_summary"]["identification"]["label"] == "grasshopper"
+    assert data["pest_summary"]["identification"]["group"] == "grasshopper_cricket"
 
 
 @pytest.mark.skipif(field_service.weed_classifier is None, reason="weed classifier not trained")

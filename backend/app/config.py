@@ -81,6 +81,7 @@ class Settings(BaseSettings):
     # Knowledge Base
     CAUSE_LOOKUP_PATH: Path = APP_DIR / "knowledge_base" / "cause_category_lookup.json"
     DISEASE_TYPES_PATH: Path = APP_DIR / "knowledge_base" / "disease_types.json"
+    PEST_TYPES_PATH: Path = APP_DIR / "knowledge_base" / "pest_types.json"
 
     # Database
     DATABASE_URL: str = f"sqlite:///{APP_DIR.parent}/agri_system.db"
