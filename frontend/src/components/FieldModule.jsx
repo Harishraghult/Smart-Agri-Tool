@@ -2,6 +2,30 @@ import React, { useState, useRef, useEffect } from 'react';
 import { postForm, loadSampleFile, errorMessage } from '../api';
 import { UploadCloud, Bug, Sprout, Droplets, ShieldAlert, CheckCircle, Sparkles } from 'lucide-react';
 
+// Model labels -> readable names (the pest dataset spells caterpillar "catterpillar")
+const LABEL_NAMES = { no_pest: 'No pest', Negative: 'No weed', catterpillar: 'Caterpillar' };
+const labelName = (label) => {
+  const key = label in LABEL_NAMES ? label : label.toLowerCase();
+  return LABEL_NAMES[key] || label.charAt(0).toUpperCase() + label.slice(1);
+};
+
+function OtherPossibilities({ identification }) {
+  // Alternatives under 1% are noise, not real possibilities
+  const others = (identification?.top_candidates || []).slice(1).filter((c) => c.confidence >= 0.01);
+  if (others.length === 0) return null;
+  return (
+    <div style={{ marginTop: '14px' }}>
+      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '6px' }}>Other possibilities</p>
+      {others.map((c) => (
+        <div key={c.class} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '3px 0', color: 'var(--text-secondary)' }}>
+          <span>{labelName(c.class)}</span>
+          <span>{(c.confidence * 100).toFixed(1)}%</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function FieldModule() {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -191,14 +215,14 @@ export default function FieldModule() {
             <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {result.pest_summary.pest_detected_list.map((item, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', background: 'var(--surface-subtle)', padding: '8px 12px', borderRadius: '8px' }}>
-                  <span style={{ color: 'var(--text-primary)' }}>{item.class}</span>
+                  <span style={{ color: 'var(--text-primary)' }}>{labelName(item.class)}</span>
                   <span style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>{(item.confidence * 100).toFixed(0)}% likely</span>
                 </div>
               ))}
             </div>
             {result.pest_summary.possible && (
               <p style={{ marginTop: '12px', fontSize: '0.85rem', color: 'var(--warning-text)' }}>
-                ⚠️ Possible {result.pest_summary.possible.toLowerCase()} ({(result.pest_summary.identification.confidence * 100).toFixed(0)}% likely). Please check the plant.
+                ⚠️ Possible {labelName(result.pest_summary.possible).toLowerCase()} ({(result.pest_summary.identification.confidence * 100).toFixed(0)}% likely). Please check the plant.
               </p>
             )}
             {result.pest_summary.identification && !result.pest_summary.identification.low_confidence && result.pest_summary.identification.label === 'no_pest' && (
@@ -206,6 +230,7 @@ export default function FieldModule() {
                 No pests found ({(result.pest_summary.identification.confidence * 100).toFixed(0)}% confident).
               </p>
             )}
+            <OtherPossibilities identification={result.pest_summary.identification} />
           </div>
 
           {/* Weed Detector Card */}
@@ -224,14 +249,14 @@ export default function FieldModule() {
             <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {result.weed_summary.weed_detected_list.map((item, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', background: 'var(--surface-subtle)', padding: '8px 12px', borderRadius: '8px' }}>
-                  <span style={{ color: 'var(--text-primary)' }}>{item.class}</span>
+                  <span style={{ color: 'var(--text-primary)' }}>{labelName(item.class)}</span>
                   <span style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>{(item.confidence * 100).toFixed(0)}% likely</span>
                 </div>
               ))}
             </div>
             {result.weed_summary.possible && (
               <p style={{ marginTop: '12px', fontSize: '0.85rem', color: 'var(--warning-text)' }}>
-                ⚠️ Possible {result.weed_summary.possible} ({(result.weed_summary.identification.confidence * 100).toFixed(0)}% likely). Please check the field.
+                ⚠️ Possible {labelName(result.weed_summary.possible)} ({(result.weed_summary.identification.confidence * 100).toFixed(0)}% likely). Please check the field.
               </p>
             )}
             {result.weed_summary.identification && !result.weed_summary.identification.low_confidence && result.weed_summary.identification.label === 'Negative' && (
@@ -239,6 +264,7 @@ export default function FieldModule() {
                 No weeds found ({(result.weed_summary.identification.confidence * 100).toFixed(0)}% confident).
               </p>
             )}
+            <OtherPossibilities identification={result.weed_summary.identification} />
           </div>
 
           {/* Water Stress Wilting Card */}
