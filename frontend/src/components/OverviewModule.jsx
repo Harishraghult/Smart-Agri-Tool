@@ -63,7 +63,7 @@ export default function OverviewModule({ setActiveTab }) {
           </div>
           <p style={{ fontSize: '1.85rem', fontWeight: 700, color: '#ffffff', margin: '8px 0 4px 0' }}>{stats ? stats.diagnoses_total.toLocaleString() : '—'}</p>
           <span style={{ fontSize: '0.8rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <TrendingUp size={14} /> {pct(metrics.disease_classifier?.val_acc)} classifier val acc
+            <TrendingUp size={14} /> {pct(metrics.disease_classifier?.val_acc)} diagnosis accuracy
           </span>
         </div>
 
@@ -102,7 +102,7 @@ export default function OverviewModule({ setActiveTab }) {
           </div>
           <p style={{ fontSize: '1.85rem', fontWeight: 700, color: '#ffffff', margin: '8px 0 4px 0' }}>{stats?.latest_crop_recommendation ?? '—'}</p>
           <span style={{ fontSize: '0.8rem', color: '#84cc16', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <TrendingUp size={14} /> {pct(metrics.crop_recommender?.test_acc)} XGBoost test acc
+            <TrendingUp size={14} /> {pct(metrics.crop_recommender?.test_acc)} recommendation accuracy
           </span>
         </div>
       </div>
@@ -141,7 +141,7 @@ export default function OverviewModule({ setActiveTab }) {
         {/* Top Suitable Crops Bar Chart */}
         <div className="glass-panel" style={{ padding: '24px' }}>
           <h4 style={{ fontSize: '1rem', color: '#cbd5e1', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sprout size={18} color="#06b6d4" /> Most Recommended Crops (XGBoost)
+            <Sprout size={18} color="#06b6d4" /> Most Recommended Crops
           </h4>
           <div style={{ width: '100%', height: 260 }}>
             <ResponsiveContainer>
@@ -171,7 +171,7 @@ export default function OverviewModule({ setActiveTab }) {
             </div>
             <div>
               <h5 style={{ fontSize: '0.95rem', color: '#ffffff' }}>Diagnose Leaf Disease</h5>
-              <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>CNN classification + lesion severity</p>
+              <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Identify the plant and its disease</p>
             </div>
             <ArrowRight size={18} color="#10b981" style={{ marginLeft: 'auto' }} />
           </div>

@@ -108,6 +108,32 @@ class InvalidModelChoiceError(ValueError):
     """Unknown disease-model choice; message is safe to show."""
 
 
+# Farmer-facing disease names for each crop-specific class (plant name comes from SUPPORTED_CROPS)
+DISEASE_NAMES = {
+    "Apple___Apple_scab": "Apple scab", "Apple___Black_rot": "Black rot", "Apple___Cedar_apple_rust": "Cedar apple rust",
+    "Cherry_(including_sour)___Powdery_mildew": "Powdery mildew",
+    "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot": "Gray leaf spot", "Corn_(maize)___Common_rust_": "Common rust",
+    "Corn_(maize)___Northern_Leaf_Blight": "Northern leaf blight", "Grape___Black_rot": "Black rot",
+    "Grape___Esca_(Black_Measles)": "Esca (black measles)", "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)": "Leaf blight",
+    "Orange___Haunglongbing_(Citrus_greening)": "Citrus greening (HLB)", "Peach___Bacterial_spot": "Bacterial spot",
+    "Pepper,_bell___Bacterial_spot": "Bacterial spot", "Potato___Early_blight": "Early blight",
+    "Potato___Late_blight": "Late blight", "Squash___Powdery_mildew": "Powdery mildew",
+    "Strawberry___Leaf_scorch": "Leaf scorch", "Tomato___Bacterial_spot": "Bacterial spot",
+    "Tomato___Early_blight": "Early blight", "Tomato___Late_blight": "Late blight", "Tomato___Leaf_Mold": "Leaf mold",
+    "Tomato___Septoria_leaf_spot": "Septoria leaf spot", "Tomato___Spider_mites Two-spotted_spider_mite": "Spider mites",
+    "Tomato___Target_Spot": "Target spot", "Tomato___Tomato_Yellow_Leaf_Curl_Virus": "Yellow leaf curl virus",
+    "Tomato___Tomato_mosaic_virus": "Mosaic virus",
+}
+
+
+def plant_and_disease(pv_class):
+    """'Pepper,_bell___Bacterial_spot' -> ('Bell Pepper', 'Bacterial spot'); healthy -> 'Healthy'."""
+    prefix = pv_class.split("___")[0]
+    plant = next((d for d, p in SUPPORTED_CROPS.items() if p == prefix), prefix.replace("_", " "))
+    disease = "Healthy" if pv_class.endswith("healthy") else DISEASE_NAMES.get(pv_class, pv_class.split("___")[-1].replace("_", " "))
+    return plant, disease
+
+
 class UnsupportedCropError(ValueError):
     """The user's crop is not covered by the disease models; message is safe to show."""
 
@@ -264,7 +290,10 @@ class DiagnosisService:
         return masked / masked.sum().clamp_min(1e-12)
 
     def predict(self, image_bytes: bytes, crop_type: str = None, model_choice: str = "auto",
-                disease_type_method: str = None) -> dict:
+                disease_type_method: str = None, answer: str = "joint") -> dict:
+        """answer="joint": one plant + disease answer that both the crop-specific model and the
+        disease-type model support (P_crop(class) x P_type(type of class)); "crop_model": the
+        crop-specific model alone (kept for comparison)."""
         model_choice = (model_choice or "auto").strip().lower()
         disease_type_method = (disease_type_method or disease_type_service.default_method()).strip().lower()
         if disease_type_method not in disease_type_service.available_methods():
@@ -354,6 +383,18 @@ class DiagnosisService:
             classifier_engine = engine
             break
 
+        # 1b. Single consistent answer: re-weight each plant+disease class by the disease-type model's
+        #     belief in that class's disease type, so the plant and the disease always agree.
+        joint_used = False
+        if probs is not None and answer == "joint" and disease_type_service.model is not None:
+            type_scores = disease_type_service.model_scores(image)
+            weights = torch.tensor([type_scores.get(disease_type_service.label_to_type.get(n), 1e-6)
+                                    for n in pv_names], device=probs.device)
+            joint = probs * weights
+            if float(joint.sum()) > 0:
+                probs = joint / joint.sum()
+                joint_used = True
+
         if probs is not None:
             conf, pred_idx = torch.max(probs, dim=0)
             predicted_class = pv_names[pred_idx.item()]
@@ -404,7 +445,12 @@ class DiagnosisService:
             "Confirm with your local agricultural extension officer before applying any chemicals",
         ])
 
+        plant, disease = plant_and_disease(predicted_class)
+        for c in top3_predictions:
+            c["plant"], c["disease"] = plant_and_disease(c["class"])
         return {
+            "plant": plant,
+            "disease": disease,
             "predicted_class": predicted_class,
             "crop_type": crop_type,
             "condition": condition,
@@ -426,8 +472,11 @@ class DiagnosisService:
             "input_warning": input_warning,
             "disease_type": disease_type,
             "disease_type_only": False,
+            "answer_method": "joint" if joint_used else "crop_model",
             "unsupported_crop": None,
             "models_used": {
+                "final_answer": (f"{ENGINE_NAMES[classifier_engine]} combined with the disease-type model "
+                                 "(EfficientNet-B0, 30+ crops)") if joint_used else ENGINE_NAMES[classifier_engine],
                 "crop_specific_diagnosis": ENGINE_NAMES[classifier_engine],
                 "disease_type": (disease_type or {}).get("model"),
             },
@@ -444,6 +493,8 @@ class DiagnosisService:
         info = disease_type_service.info(dt["type"])
         healthy = dt["type"] == "healthy"
         return {
+            "plant": crop_name,
+            "disease": dt["display_name"],
             "predicted_class": None,
             "crop_type": crop_name,
             "condition": dt["display_name"],
@@ -465,8 +516,10 @@ class DiagnosisService:
             "input_warning": input_warning,
             "disease_type": dt,
             "disease_type_only": True,
+            "answer_method": "disease_type_model",
             "unsupported_crop": crop_name,
-            "models_used": {"crop_specific_diagnosis": None, "disease_type": dt["model"]},
+            "models_used": {"final_answer": "Disease-type model (EfficientNet-B0, 30+ crops)",
+                            "crop_specific_diagnosis": None, "disease_type": dt["model"]},
             "inference_engine": {
                 "classifier": "disease_type_model",
                 "severity": "unet" if self.unet_model is not None else "hsv_heuristic",

@@ -63,7 +63,7 @@ export default function RipenessModule() {
       <div className="glass-panel" style={{ padding: '24px' }}>
         <h3 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>Fruit Ripeness & Quality Assessment</h3>
         <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '24px' }}>
-          Dedicated EfficientNet-B0 trained on the Banana Ripeness dataset (unripe / ripe / overripe / rotten), plus an HSV colour-space ripeness index.
+          Upload a banana photo to see its ripeness stage (unripe, ripe, overripe or rotten), quality grade and shelf life.
         </p>
 
         {/* Sample Selection Quick Buttons */}
@@ -114,10 +114,10 @@ export default function RipenessModule() {
           {/* Model Track Architectural Note */}
           <div style={{ background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
             <h4 style={{ color: '#f59e0b', fontSize: '0.95rem', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Info size={18} /> Model Track Separation
+              <Info size={18} /> How it works
             </h4>
             <p style={{ color: '#94a3b8', fontSize: '0.85rem', lineHeight: '1.6' }}>
-              Per design requirements, fruit ripeness does <strong>NOT</strong> reuse leaf disease CNN weights. It runs on a dedicated EfficientNet-B0 fine-tuned from ImageNet on the Banana Ripeness dataset, combined with HSV color histograms.
+              The ripeness stage is learned from thousands of banana photos at every stage. The colour bars show how much of the fruit is green, yellow or brown, which drives the ripeness index.
             </p>
           </div>
         </div>

@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 
 export default function TopHeader({ activeTab }) {
   const titles = {
-    overview: { title: 'AgriPulse AI Executive Dashboard', subtitle: 'Real-time multi-model analytics, health indices, & quick launch' },
-    diagnosis: { title: 'Plant Disease & Pathology Diagnosis', subtitle: 'EfficientNet-B0 classification + lesion area severity percentage' },
-    ripeness: { title: 'Fruit Ripeness & Quality Assessment', subtitle: 'HSV colour-space ripeness index & grading' },
-    field: { title: 'Field Scouting & Object Intelligence', subtitle: 'Pest & weed species classifiers + water-stress index' },
-    advisory: { title: 'Live Weather Forecast & Advisory', subtitle: 'Meteorological cross-referencing & chemical spraying windows' },
-    crop: { title: 'Tabular Crop Recommendation System', subtitle: 'XGBoost ML model with feature importance explainability' },
+    overview: { title: 'AgriPulse AI Executive Dashboard', subtitle: 'Field health, recent scans and quick access to every tool' },
+    diagnosis: { title: 'Plant Disease & Pathology Diagnosis', subtitle: 'Identify the plant and its disease from a leaf photo' },
+    ripeness: { title: 'Fruit Ripeness & Quality Assessment', subtitle: 'Ripeness stage, quality grade and shelf life from a fruit photo' },
+    field: { title: 'Field Scouting & Object Intelligence', subtitle: 'Spot pests, weeds and water stress in field photos' },
+    advisory: { title: 'Live Weather Forecast & Advisory', subtitle: 'Live forecast, irrigation advice and safe spraying windows' },
+    crop: { title: 'Tabular Crop Recommendation System', subtitle: 'Best crops for your soil and climate' },
     chat: { title: 'AI Agricultural Expert Chatbot', subtitle: 'Interactive farming advisory & IPM knowledge retrieval' },
   };
 
@@ -22,9 +22,6 @@ export default function TopHeader({ activeTab }) {
   }, []);
 
   const online = status?.status === 'online';
-  const loadedModels = status?.models
-    ? Object.entries(status.models).filter(([, ok]) => ok).map(([name]) => name).join(', ')
-    : '';
 
   return (
     <header className="top-header">
@@ -35,14 +32,13 @@ export default function TopHeader({ activeTab }) {
 
       <div
         className="system-status-pill"
-        title={loadedModels ? `Loaded models: ${loadedModels}` : undefined}
         style={status && !online ? { opacity: 0.6 } : undefined}
       >
         <span className="pulse-dot" style={status && !online ? { background: '#ef4444' } : undefined}></span>
         <span>
           {!status && 'Connecting to backend…'}
           {status && !online && 'Backend Offline'}
-          {online && `Backend Online · ${status.models_loaded}/${status.models_total} models loaded`}
+          {online && 'Backend Online'}
         </span>
       </div>
     </header>

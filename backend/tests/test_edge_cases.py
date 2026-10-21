@@ -296,3 +296,25 @@ def test_disease_type_combined_method_and_default():
     menu = client.get("/api/v1/diagnosis/models").json()
     assert menu["disease_type_default"] == "model"
     assert [m["id"] for m in menu["disease_type_methods"]] == ["model", "combined", "aggregated"]
+
+
+# --- Single plant + disease answer ---
+
+@needs_models
+def test_single_plant_and_disease_answer():
+    data = client.post("/api/v1/diagnosis/predict", files={"file": ("x", encode(leaf()), "image/jpeg")}).json()
+    assert data["plant"] == "Tomato" and data["disease"] == "Early blight"
+    assert all(c["plant"] and c["disease"] for c in data["top_candidates"])
+
+
+@needs_models
+def test_healthy_leaf_reports_healthy():
+    img = Image.open(SAMPLES / "tomato_healthy.jpg").convert("RGB")
+    data = client.post("/api/v1/diagnosis/predict", files={"file": ("x", encode(img), "image/jpeg")}).json()
+    assert data["plant"] == "Tomato" and data["disease"] == "Healthy" and data["is_healthy"]
+
+
+@pytest.mark.skipif(disease_type_service.model is None, reason="disease-type model not trained")
+def test_joint_answer_is_default_when_disease_type_model_loaded():
+    data = client.post("/api/v1/diagnosis/predict", files={"file": ("x", encode(leaf()), "image/jpeg")}).json()
+    assert data["answer_method"] == "joint"

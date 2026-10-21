@@ -70,6 +70,19 @@ Every API response carries an `inference_engine` field saying whether a trained 
 
 ---
 
+## 🩺 One Answer: Plant + Disease
+
+The Diagnosis page shows a single answer, e.g. **Plant: Potato · Disease: Early blight**, plus other
+possibilities and treatment advice. The answer combines the crop-specific model with the disease-type
+model (score = P(plant + disease) × P(disease type)), so the plant and disease always agree.
+Same 1,735 held-out photos of supported crops, crop-specific model alone → combined:
+disease right 78.8% → **82.1%**, plant and disease both right 72.0% → **72.6%**, plant right 84.6% → 83.1%.
+Plant names cover the 14 supported crops; for any other plant the disease is still reported, but the
+plant shown is the closest supported look-alike (turn on BioCLIP-2 to name other plants).
+
+The page no longer shows crop/model selectors or model names; the API still accepts `crop_type`, `model`
+and `disease_type_method` and reports the models used in `models_used`.
+
 ## 🦠 Disease Type (any crop)
 
 Every diagnosis also reports a crop-independent **disease type** (22 types: early blight, late blight,

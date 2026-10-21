@@ -109,7 +109,7 @@ export default function FieldModule() {
       <div className="glass-panel" style={{ padding: '24px' }}>
         <h3 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>Field Intelligence & Scouting</h3>
         <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '24px' }}>
-          Identifies pest species (EfficientNet-B0, 12 Agricultural-Pests classes), weed species (EfficientNet-B0, DeepWeeds), and estimates crop water-stress from leaf colour.
+          Upload a field or leaf photo to identify common pests and weeds and check the crop for water stress.
         </p>
 
         {/* Sample Selection Quick Buttons */}
@@ -254,7 +254,7 @@ export default function FieldModule() {
             </p>
 
             <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '16px' }}>
-              {result.inference_engine?.wilting === 'cnn' ? 'CNN' : 'Leaf-colour index'} confidence: {(result.water_stress.confidence * 100).toFixed(1)}%
+              Confidence: {(result.water_stress.confidence * 100).toFixed(1)}%
             </p>
 
             <div style={{ padding: '12px', background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.15)', borderRadius: '10px' }}>

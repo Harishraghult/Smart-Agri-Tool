@@ -45,7 +45,7 @@ export default function CropModule() {
       <div className="glass-panel" style={{ padding: '24px' }}>
         <h3 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>Tabular Crop Recommendation & Explainable ML</h3>
         <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '20px' }}>
-          XGBoost machine learning model trained on soil nutrient profiles (N, P, K) and agro-climatic conditions.
+          Enter your soil nutrients (N, P, K) and local climate to see which crops suit your field best.
         </p>
 
         {/* Soil Presets */}
@@ -128,17 +128,17 @@ export default function CropModule() {
             </div>
 
             <button className="btn-primary" style={{ marginTop: '20px', width: '100%', justifyContent: 'center' }} onClick={handleRecommend} disabled={loading}>
-              {loading ? 'Evaluating XGBoost Model...' : 'Predict Optimal Crops'}
+              {loading ? 'Finding best crops...' : 'Predict Optimal Crops'}
             </button>
           </div>
 
           {/* Model info card */}
           <div style={{ background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <h4 style={{ color: '#10b981', fontSize: '1rem', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Sprout size={20} /> Why XGBoost Tabular ML?
+              <Sprout size={20} /> How it works
             </h4>
             <p style={{ color: '#94a3b8', fontSize: '0.875rem', lineHeight: '1.6' }}>
-              XGBoost handles multi-variable nutrient interaction non-linearities (e.g. Nitrogen-Potassium ratios under varying rainfall regimes) with state-of-the-art precision, outperforming standard Random Forests while maintaining built-in feature importance explainability.
+              The recommendation is learned from thousands of real soil and climate records for 22 crops. It looks at how nutrients, temperature, humidity, pH and rainfall work together, and shows which of your inputs mattered most.
             </p>
           </div>
         </div>
